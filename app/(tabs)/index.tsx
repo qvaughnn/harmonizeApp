@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Image, StyleSheet, Platform, View, Text, TextInput, ImageBackground, Pressable } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -7,68 +7,112 @@ import { ThemedView } from '@/components/ThemedView';
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
+    <ImageBackground
+      source={require('@/assets/images/background.webp')}
+      style={styles.background}
+    >
+      <View style={styles.overall}>
+      <Image
+          source={require('@/assets/images/logo.png')}
           style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      />
+      <Text style={styles.title}>
+        Log in to continue.
+      </Text>
+      <TextInput
+        style={styles.login}
+        placeholder="Username"
+      />
+      <TextInput
+        style={styles.login}
+        placeholder="Password"
+      />
+      <Pressable style={styles.submitButton}>
+        <Text style={styles.submitButtonText}>Submit</Text>
+      </Pressable>
+      <Text>Or</Text>
+      <Pressable style={styles.spotifyButton}>
+        <Text style={styles.spotifyButtonText}>LOG IN WITH SPOTIFY</Text>
+      </Pressable>
+      <Pressable style={styles.appleButton}>
+        <Text style={styles.appleButtonText}>LOG IN WITH APPLE MUSIC</Text>
+      </Pressable>
+      <Text>Don't have an account? SIGN UP</Text>
+    </View>
+    </ImageBackground>
+    
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  overall: {
     alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
   },
   reactLogo: {
-    height: 178,
-    width: 290,
+    height: 270,
+    width: 400,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+  },
+  login: {
+    height: 40,
+    borderColor: 'black',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    backgroundColor: 'white',
+    marginVertical: 20,
+    width: '50%',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold', 
+    marginVertical: 20,
+    color: 'white',
+  },
+  background: {
+    flex:1,
+  },
+  submitButton: {
+    backgroundColor: '#4B0082', // Purple color
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 30, // Fully rounded button
+    elevation: 5, // Adds shadow on Android
+    shadowColor: '#800080', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  submitButtonText: {
+    color: 'white'
+  },
+  spotifyButton: {
+    backgroundColor: 'green', // Purple color
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 30, // Fully rounded button
+    elevation: 5, // Adds shadow on Android
+    shadowColor: 'green', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  spotifyButtonText: {
+    color: 'white'
+  },
+  appleButton: {
+    backgroundColor: 'gray', // Purple color
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 30, // Fully rounded button
+    elevation: 5, // Adds shadow on Android
+    shadowColor: 'gray', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  appleButtonText: {
+    color: 'white'
   },
 });
