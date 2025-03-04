@@ -1,5 +1,4 @@
 import { Image, StyleSheet, Platform, View, Text, TextInput, ImageBackground, Pressable } from 'react-native';
-
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
@@ -7,17 +6,14 @@ import { ThemedView } from '@/components/ThemedView';
 
 export default function HomeScreen() {
   return (
-    <ImageBackground
-      source={require('@/assets/images/background.webp')}
-      style={styles.background}
-    >
-      <View style={styles.overall}>
+    <ParallaxScrollView>
+      {/* <ThemedView style={styles.overall}> */}
       <Image
-          source={require('@/assets/images/logo.png')}
+          source={require('@/assets/images/logo-noBG.png')}
           style={styles.reactLogo}
       />
       <Text style={styles.title}>
-        Log in to continue.
+        Log in to continue
       </Text>
       <TextInput
         style={styles.login}
@@ -38,9 +34,9 @@ export default function HomeScreen() {
         <Text style={styles.appleButtonText}>LOG IN WITH APPLE MUSIC</Text>
       </Pressable>
       <Text>Don't have an account? SIGN UP</Text>
-    </View>
-    </ImageBackground>
-    
+      {/* </ThemedView> */}
+
+    </ParallaxScrollView>
   );
 }
 
@@ -53,6 +49,7 @@ const styles = StyleSheet.create({
     width: 400,
     bottom: 0,
     left: 0,
+    marginVertical: 20,
   },
   login: {
     height: 40,
@@ -61,17 +58,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 5,
     backgroundColor: 'white',
-    marginVertical: 20,
-    width: '50%',
+    marginVertical: 10,
+    width: '70%',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold', 
-    marginVertical: 20,
     color: 'white',
-  },
-  background: {
-    flex:1,
   },
   submitButton: {
     backgroundColor: '#4B0082', // Purple color
