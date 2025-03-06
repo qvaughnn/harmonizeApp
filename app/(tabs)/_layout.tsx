@@ -11,18 +11,12 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
-  const iconColor = Colors[colorScheme ?? 'light'].icon;
-  // const [pressed, setPressed] = useState(false);
-
-  // const handlePress = () => {
-  //   setPressed(!pressed);
-  // };
-
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        //tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tabIconSelected,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -42,7 +36,7 @@ export default function TabLayout() {
           <IconSymbol 
             size={28} 
             name="music.note.house.fill" 
-            color={iconColor} 
+            color={color} 
           />,
         }}
       />
@@ -54,7 +48,7 @@ export default function TabLayout() {
           <IconSymbol 
             size={28} 
             name="person.2.crop.square.stack" 
-            color={iconColor} 
+            color={color} 
           />,
         }}
       />
@@ -66,7 +60,7 @@ export default function TabLayout() {
           <IconSymbol 
             size={28} 
             name="magnifyingglass" 
-            color={iconColor} 
+            color={color} 
           />,
         }}
       />
@@ -78,7 +72,7 @@ export default function TabLayout() {
           <IconSymbol 
             size={28} 
             name="person.crop.circle" 
-            color={iconColor} />,
+            color={color} />,
         }}
       />
       <Tabs.Screen
@@ -89,7 +83,7 @@ export default function TabLayout() {
           <IconSymbol 
             size={28} 
             name="star.fill" 
-            color={iconColor} />,
+            color={color} />,
         }}
       />
     </Tabs>

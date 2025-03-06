@@ -5,7 +5,7 @@
 
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
-const selectedIconColor = '#9b59b6';
+const selectedIconColor = '#410976';
 
 export const Colors = {
   light: {
