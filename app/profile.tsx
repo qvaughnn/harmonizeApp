@@ -8,7 +8,7 @@ const Profile = () => {
       <Text variant="displayMedium" style={styles.title}>
         PROFILE
       </Text>
-      <Avatar.Image style={styles.icon} size={180} source={require('../../assets/images/avatar.png')} />
+      <Avatar.Image style={styles.icon} size={180} source={require('../assets/images/avatar.png')} />
       <Text variant="headlineSmall">@username</Text>
       <Button
         style={styles.updateButton}

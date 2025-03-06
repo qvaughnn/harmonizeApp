@@ -1,15 +1,57 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, Dimensions } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button, Avatar} from 'react-native-paper';
+import { Text , TextInput, Button, Avatar, Card} from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import Profile from './profile';
+import { useRouter } from 'expo-router';
+// import Carousel from 'react-native-snap-carousel';
+import Carousel from 'react-native-snap-carousel-v4';
+import Profile from '../profile';
+import Playlists from './allPlaylists';
+import Friends from './friends';
 
+const { width } = Dimensions.get('window');
+
+const images = [
+  { id: '1', uri: require('../../assets/images/coverSample.png') },
+  { id: '2', uri: require('../../assets/images/coverSample.png')},
+  { id: '3', uri: require('../../assets/images/coverSample.png') },
+  { id: '4', uri: require('../../assets/images/coverSample.png')},
+];
+
+const ImageCarousel = () => {
+  const renderItem = ({ item }: { item: { id: string; uri: any } }) => (
+    <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
+      <Image source={item.uri} style={{ width: '100%', height: 270 }} resizeMode="cover" />
+    </Card>
+  );
+
+  return (
+    <Carousel
+      data={images}
+      renderItem={renderItem}
+      sliderWidth={width}
+      itemWidth={width * 0.8}
+      loop={false}
+      autoplay={false}
+      scrollEnabled={true}
+      containerCustomStyle={{ marginTop: 220 }} 
+    />
+  );
+};
 export default function TabTwoScreen() {
 
-  const navigation = useNavigation();
+  const router = useRouter();
 
-  const handleUserPress = () => {
-    // navigation.navigate('Profile');
+  const handleUserIconPress = () => {
+    router.push('/profile');
+  };
+
+  const handlePlaylistsPress = () => {
+    router.push('/allPlaylists');
+  };
+
+  const handleFriendsPress = () => {
+    router.push('/friends');
   };
 
   return (
@@ -18,19 +60,37 @@ export default function TabTwoScreen() {
         HARMONIZE
       </Text>
       
-      <Pressable style={styles.icon} onPress={handleUserPress}>
+      <Pressable style={styles.icon} onPress={handleUserIconPress}>
         <Avatar.Image size={50} source={require('../../assets/images/avatar.png')} />
       </Pressable>
 
-      <Text variant="headlineMedium" style = {styles.subtitle}>
-        PLAYLISTS
-      </Text>
-      <Text style = {styles.view}>
-        View all
-      </Text>
-      <Text variant="headlineMedium" style = {styles.subtitle2}>
-        FREINDS
-      </Text>
+      <Pressable onPress={handlePlaylistsPress} style={styles.subtitlePress}>
+        <Text variant="headlineMedium" style = {styles.subtitle}>
+          PLAYLISTS
+        </Text>
+      </Pressable>
+
+      <Pressable onPress={handlePlaylistsPress} style={styles.viewPress}>
+        <Text style = {styles.view}>
+          View all
+        </Text>
+      </Pressable>
+
+      <ImageCarousel/>
+
+{/* 
+      <Pressable>
+        <Image
+          source={require('../../assets/images/coverSample.png')}
+          style={styles.cover}
+        />
+      </Pressable> */}
+
+      <Pressable onPress={handleFriendsPress} style = {styles.subtitlePress2}>
+        <Text variant="headlineMedium" style = {styles.subtitle2}>
+          FRIENDS
+        </Text>
+      </Pressable>
     </ThemedView>
   );
 }
@@ -42,8 +102,6 @@ const styles = StyleSheet.create({
     // justifyContent: 'center',
   },
   title: {
-    // marginVertical: 80,
-    // marginLeft: 20,
     fontWeight: 'bold',
     color: 'darkgrey',
     position: 'absolute',
@@ -52,20 +110,20 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   subtitle: {
-    // marginLeft: 20,
-    // fontSize: 30,
     fontWeight: 'bold',
     color: 'white',
+  },
+  subtitlePress:{
     position: 'absolute',
     top: 170,
     left: 25,
     justifyContent: 'flex-start',
   },
   subtitle2: {
-    // marginLeft: 20,
-    // fontSize: 30,
     fontWeight: 'bold',
     color: 'white',
+  },
+  subtitlePress2:{
     position: 'absolute',
     top: 500,
     left: 25,
@@ -74,20 +132,26 @@ const styles = StyleSheet.create({
   view: {
     fontWeight: 'medium',
     color: 'white',
+  },
+  viewPress:{
     position: 'absolute',
     top: 170,
     right: 25,
     justifyContent: 'flex-start',
     fontSize: 15,
-    // marginVertical: -20,
-    // marginRight: 20,
-    // textAlign: 'right',
   },
   icon:{
     position: 'absolute',
     justifyContent: 'flex-start',
     right: 20,
     top: 80,
+  },
+  cover: {
+    // height: 230,
+    // width: 230,
+    top: 210,
+    marginVertical: 20,
+    // resizeMode: 'contain'
   },
 });
 

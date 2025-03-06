@@ -65,13 +65,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="allPlaylists"
         options={{
-          title: 'Profile',
+          title: 'My Playlists',
           tabBarIcon: ({ color }) => 
           <IconSymbol 
             size={28} 
-            name="person.crop.circle" 
+            name="music.note.list" 
             color={color} />,
         }}
       />

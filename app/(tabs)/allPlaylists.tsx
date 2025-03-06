@@ -21,8 +21,9 @@ const styles = StyleSheet.create({
   title:{
     color:'darkgrey',
     position: 'absolute',
-    top: 60,
+    top: 80,
     left: 25,
     justifyContent: 'flex-start',
-  }
+    fontWeight: 'bold',
+  },
 });
