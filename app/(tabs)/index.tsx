@@ -1,111 +1,86 @@
-import { Image, StyleSheet, Platform, View, Text, TextInput, ImageBackground, Pressable } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { Text , TextInput, Button } from 'react-native-paper';
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView>
-      {/* <ThemedView style={styles.overall}> */}
+    <ThemedView style={styles.overall}>
       <Image
-          source={require('@/assets/images/logo-noBG.png')}
+          source={require('@/assets/images/logoTest.png')}
           style={styles.reactLogo}
       />
-      <Text style={styles.title}>
+      {/* <Text variant="headlineLarge" style={styles.title}>
         Log in to continue
-      </Text>
-      <TextInput
-        style={styles.login}
-        placeholder="Username"
-      />
-      <TextInput
-        style={styles.login}
-        placeholder="Password"
-      />
-      <Pressable style={styles.submitButton}>
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </Pressable>
-      <Text>Or</Text>
-      <Pressable style={styles.spotifyButton}>
-        <Text style={styles.spotifyButtonText}>LOG IN WITH SPOTIFY</Text>
-      </Pressable>
-      <Pressable style={styles.appleButton}>
-        <Text style={styles.appleButtonText}>LOG IN WITH APPLE MUSIC</Text>
-      </Pressable>
-      <Text>Don't have an account? SIGN UP</Text>
-      {/* </ThemedView> */}
-
-    </ParallaxScrollView>
+      </Text> */}
+      <Button 
+        icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>} 
+        style={styles.spotifyButton} 
+        mode="elevated"
+        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}>
+          LOG IN WITH SPOTIFY
+      </Button>
+      <Button 
+        icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>} 
+        style={styles.appleButton} 
+        mode="elevated"
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:17, }}>
+          LOG IN WITH APPLE MUSIC
+      </Button>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   overall: {
     alignItems: 'center',
+    flex:1,
+    justifyContent: 'center',
   },
   reactLogo: {
-    height: 270,
-    width: 400,
+    height: 330,
+    width: 800,
     bottom: 0,
     left: 0,
     marginVertical: 20,
-  },
-  login: {
-    height: 40,
-    borderColor: 'black',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    backgroundColor: 'white',
-    marginVertical: 10,
-    width: '70%',
+    resizeMode: 'contain'
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold', 
     color: 'white',
   },
-  submitButton: {
-    backgroundColor: '#4B0082', // Purple color
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 30, // Fully rounded button
-    elevation: 5, // Adds shadow on Android
-    shadowColor: '#800080', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  submitButtonText: {
-    color: 'white'
-  },
   spotifyButton: {
-    backgroundColor: 'green', // Purple color
+    backgroundColor: '#1BB954',
     paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingHorizontal: 10,
     borderRadius: 30, // Fully rounded button
     elevation: 5, // Adds shadow on Android
-    shadowColor: 'green', // Shadow color for iOS
+    shadowColor: 'black', // Shadow color for iOS
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-  },
-  spotifyButtonText: {
-    color: 'white'
+    marginVertical: 20,
   },
   appleButton: {
-    backgroundColor: 'gray', // Purple color
+    backgroundColor: '#ffffff',
     paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingHorizontal: 10,
     borderRadius: 30, // Fully rounded button
     elevation: 5, // Adds shadow on Android
-    shadowColor: 'gray', // Shadow color for iOS
+    shadowColor: 'black', // Shadow color for iOS
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+    marginVertical: 20,
   },
-  appleButtonText: {
-    color: 'white'
+  spotifyLogo: {
+    height:40,
+    width:40
   },
+  appleLogo:{
+    height:30,
+    width:30,
+    resizeMode: 'contain'
+  }
 });

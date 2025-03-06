@@ -12,6 +12,6 @@ export function ThemedView({ style, lightColor, darkColor, ...otherProps }: Them
 
   // return <View style={[{ backgroundColor }, style]} {...otherProps} />;
   return (
-    <LinearGradient colors={['#300048', '#5f0a87', '#a4508b']} style={style} {...otherProps} />
+    <LinearGradient colors={['#39065b', '#582877', '#946ead']} style={style} {...otherProps} />
   );
 }
