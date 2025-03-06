@@ -10,9 +10,8 @@ import { Fontisto } from '@expo/vector-icons';
 
 export default function TabTwoScreen() {
   return (
-    //<ParallaxScrollView>
+    <ThemedView style={styles.overall}>
     <View>
-    
       <Text style = {styles.title}>
         HARMONIZE
       </Text>
@@ -27,15 +26,16 @@ export default function TabTwoScreen() {
         View all
       </Text>
     </View>
-    //</ParallaxScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   overall: {
     alignItems: 'center',
+    flex:1,
+    justifyContent: 'center',
   },
-
   title: {
     marginVertical: 80,
     marginLeft: 20,

@@ -4,12 +4,13 @@ import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BlurTabBarBackground() {
+  
   return (
     <BlurView
       // System chrome material automatically adapts to the system's theme
       // and matches the native tab bar appearance on iOS.
       tint="systemChromeMaterial"
-      intensity={100}
+      intensity={10}
       style={StyleSheet.absoluteFill}
     />
   );

@@ -1,7 +1,4 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button } from 'react-native-paper';
 
@@ -12,9 +9,6 @@ export default function HomeScreen() {
           source={require('@/assets/images/logoTest.png')}
           style={styles.reactLogo}
       />
-      {/* <Text variant="headlineLarge" style={styles.title}>
-        Log in to continue
-      </Text> */}
       <Button 
         icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>} 
         style={styles.spotifyButton} 
@@ -46,9 +40,6 @@ const styles = StyleSheet.create({
     left: 0,
     marginVertical: 20,
     resizeMode: 'contain'
-  },
-  title: {
-    color: 'white',
   },
   spotifyButton: {
     backgroundColor: '#1BB954',
