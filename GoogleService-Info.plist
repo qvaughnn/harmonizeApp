@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyCxfm5Q9zmJg3R5mz9X0M7JIvloBWUQ-QU</string>
+	<key>GCM_SENDER_ID</key>
+	<string>294773082167</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.harmonizeapp</string>
+	<key>PROJECT_ID</key>
+	<string>harmonize-37b1a</string>
+	<key>STORAGE_BUCKET</key>
+	<string>harmonize-37b1a.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:294773082167:ios:48da2287f9fdd9ffd2d7b2</string>
+</dict>
+</plist>

@@ -35,4 +35,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Firebase & Google Service Configs (Sensitive)
+.firebase/
+
 app-example

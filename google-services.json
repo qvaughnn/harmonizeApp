@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "294773082167",
+    "project_id": "harmonize-37b1a",
+    "storage_bucket": "harmonize-37b1a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:294773082167:android:3197c34d732e011bd2d7b2",
+        "android_client_info": {
+          "package_name": "com.harmonizeapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRbJr70n3Y9RwA747um1ZyBv2PqsKWrh8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
