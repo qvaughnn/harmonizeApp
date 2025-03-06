@@ -1,16 +1,13 @@
-import { StyleSheet, Image, Platform } from 'react-native';
-
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Text , TextInput, Button } from 'react-native-paper';
 
 export default function TabTwoScreen() {
   return (
     <ThemedView style={styles.overall}>
-      
+      <Text variant="displayMedium" style={styles.title}>
+        PLAYLIST 1
+      </Text>
     </ThemedView>
   );
 }
@@ -18,5 +15,15 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   overall: {
     alignItems: 'center',
+    flex:1,
+    justifyContent: 'center',
+  },
+  title:{
+    color:'darkgrey',
+    position: 'absolute',
+    top: 80,
+    left: 25,
+    justifyContent: 'flex-start',
+    fontWeight: 'bold',
   },
 });
