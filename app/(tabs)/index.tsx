@@ -1,8 +1,62 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button } from 'react-native-paper';
+import * as AuthSession from 'expo-auth-session';
+import { useEffect, useState } from 'react';
+
+const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
+const REDIRECT_URI = 'harmonize-login://callback';
+
+const SCOPES = ['user-read-private', 'user-read-email'];
+
+const discovery = {
+  authorizationEndpoint: 'https://accounts.spotify.com/authorize',
+  tokenEndpoint: 'https://accounts.spotify.com/api/token',
+};
 
 export default function HomeScreen() {
+  const [token, setToken] = useState<string | null>(null);
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: CLIENT_ID,
+      scopes: SCOPES,
+      redirectUri: REDIRECT_URI,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+    },
+    discovery
+  );
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      exchangeCodeForToken(response.params.code);
+    }
+  }, [response]);
+
+  const exchangeCodeForToken = async (code: string) => {
+    try {
+      const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT_URI,
+      });
+
+      const tokenResponse = await fetch(discovery.tokenEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      });
+
+      const tokenData = await tokenResponse.json();
+      setToken(tokenData.access_token);
+      console.log('Spotify Token:', tokenData);
+    } catch (error) {
+      console.error('Token exchange error:', error);
+    }
+  };
+
   return (
     <ThemedView style={styles.overall}>
       <Image
@@ -13,7 +67,8 @@ export default function HomeScreen() {
         icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>} 
         style={styles.spotifyButton} 
         mode="elevated"
-        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}>
+        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}
+        onPress={() => promptAsync()}>
           LOG IN WITH SPOTIFY
       </Button>
       <Button 
