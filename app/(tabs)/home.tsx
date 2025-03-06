@@ -1,31 +1,36 @@
-import { StyleSheet, Image, Platform, Text, View } from 'react-native';
-
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Fontisto } from '@expo/vector-icons';
+import { Text , TextInput, Button, Avatar} from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import Profile from './profile';
 
 export default function TabTwoScreen() {
+
+  const navigation = useNavigation();
+
+  const handleUserPress = () => {
+    // navigation.navigate('Profile');
+  };
+
   return (
     <ThemedView style={styles.overall}>
-    <View>
-      <Text style = {styles.title}>
+      <Text variant="displayMedium" style = {styles.title}>
         HARMONIZE
       </Text>
       
-      {/* insert profile photo in top right corner */}
+      <Pressable style={styles.icon} onPress={handleUserPress}>
+        <Avatar.Image size={50} source={require('../../assets/images/avatar.png')} />
+      </Pressable>
 
-      <Text style = {styles.subtitle}>
-        Playlists
+      <Text variant="headlineMedium" style = {styles.subtitle}>
+        PLAYLISTS
       </Text>
-
       <Text style = {styles.view}>
         View all
       </Text>
-    </View>
+      <Text variant="headlineMedium" style = {styles.subtitle2}>
+        FREINDS
+      </Text>
     </ThemedView>
   );
 }
@@ -34,29 +39,55 @@ const styles = StyleSheet.create({
   overall: {
     alignItems: 'center',
     flex:1,
-    justifyContent: 'center',
+    // justifyContent: 'center',
   },
   title: {
-    marginVertical: 80,
-    marginLeft: 20,
-    fontSize: 40,
+    // marginVertical: 80,
+    // marginLeft: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: 'darkgrey',
+    position: 'absolute',
+    top: 80,
+    left: 25,
+    justifyContent: 'flex-start',
   },
-
   subtitle: {
-    marginLeft: 20,
-    fontSize: 30,
+    // marginLeft: 20,
+    // fontSize: 30,
     fontWeight: 'bold',
     color: 'white',
+    position: 'absolute',
+    top: 170,
+    left: 25,
+    justifyContent: 'flex-start',
   },
-
+  subtitle2: {
+    // marginLeft: 20,
+    // fontSize: 30,
+    fontWeight: 'bold',
+    color: 'white',
+    position: 'absolute',
+    top: 500,
+    left: 25,
+    justifyContent: 'flex-start',
+  },
   view: {
-    marginVertical: -20,
-    fontSize: 15,
-    marginRight: 20,
     fontWeight: 'medium',
     color: 'white',
-    textAlign: 'right',
+    position: 'absolute',
+    top: 170,
+    right: 25,
+    justifyContent: 'flex-start',
+    fontSize: 15,
+    // marginVertical: -20,
+    // marginRight: 20,
+    // textAlign: 'right',
+  },
+  icon:{
+    position: 'absolute',
+    justifyContent: 'flex-start',
+    right: 20,
+    top: 80,
   },
 });
+
