@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
 import Profile from '../profile';
 import Playlists from './allPlaylists';
+import Playlist from '../playlist';
 import Friends from './friends';
 
 const { width } = Dimensions.get('window');
@@ -18,11 +19,13 @@ const images = [
   { id: '4', uri: require('../../assets/images/coverSample.png')},
 ];
 
-const ImageCarousel = () => {
+const ImageCarousel = ({ onPress }: { onPress: () => void }) =>{
   const renderItem = ({ item }: { item: { id: string; uri: any } }) => (
-    <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
-      <Image source={item.uri} style={{ width: '100%', height: 270 }} resizeMode="cover" />
-    </Card>
+    <Pressable onPress={onPress}>
+      <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
+        <Image source={item.uri} style={{ width: '100%', height: 270 }} resizeMode="cover" />
+      </Card>
+    </Pressable>
   );
 
   return (
@@ -47,7 +50,7 @@ export default function TabTwoScreen() {
   };
 
   const handlePlaylistsPress = () => {
-    router.push('/allPlaylists');
+    router.push('/playlist');
   };
 
   const handleFriendsPress = () => {
@@ -63,7 +66,7 @@ export default function TabTwoScreen() {
       <Pressable style={styles.icon} onPress={handleUserIconPress}>
         <Avatar.Image size={50} source={require('../../assets/images/avatar.png')} />
       </Pressable>
-
+      
       <Pressable onPress={handlePlaylistsPress} style={styles.subtitlePress}>
         <Text variant="headlineMedium" style = {styles.subtitle}>
           PLAYLISTS
@@ -76,7 +79,7 @@ export default function TabTwoScreen() {
         </Text>
       </Pressable>
 
-      <ImageCarousel/>
+      <ImageCarousel onPress={handlePlaylistsPress}/>
 
 {/* 
       <Pressable>
