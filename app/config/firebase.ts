@@ -20,4 +20,4 @@ const database = getDatabase(app);
 const auth = getAuth(app);
 
 // Export the Firebase app instance for use in other parts of the app
-export default app;
+export { app, database };

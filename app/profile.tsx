@@ -2,10 +2,10 @@ import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'r
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Avatar} from 'react-native-paper';
 import { useState, useEffect, useContext } from 'react';
-// import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../contexts/AuthContext'; 
 
 const Profile = () => {
-  // const { token, setToken } = useAuth(); 
+  const { token, setToken } = useAuth(); 
   const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {

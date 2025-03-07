@@ -3,11 +3,16 @@ import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button } from 'react-native-paper';
 import * as AuthSession from 'expo-auth-session';
 import { useEffect, useState } from 'react';
+import { getAuth, signInAnonymously } from "firebase/auth";
+import { ref, set } from "firebase/database";
+import { useAuth } from "../../contexts/AuthContext";
+import { app, database } from "../config/firebase";
 
+const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 const REDIRECT_URI = 'exp://10.140.46.209:8081';
-
 const SCOPES = ['user-read-private', 'user-read-email'];
+
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.spotify.com/authorize',
@@ -15,7 +20,8 @@ const discovery = {
 };
 
 export default function HomeScreen() {
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setLocalToken] = useState<string | null>(null);
+  const { setToken, setSpotifyUserId } = useAuth();
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -34,15 +40,9 @@ export default function HomeScreen() {
     }
   }, [response]);
 
-  useEffect(() => {
-    if (token) {
-        fetchUserProfile();
-    }
-}, [token]);
-
+  // Exchange code for token and store user data in Firebase
   const exchangeCodeForToken = async (code: string) => {
     try {
-
       if (!request?.codeVerifier) {
         console.error("Missing code verifier!");
         return;
@@ -50,34 +50,72 @@ export default function HomeScreen() {
 
       const params = new URLSearchParams({
         client_id: CLIENT_ID,
-        grant_type: 'authorization_code',
+        grant_type: "authorization_code",
         code,
         redirect_uri: REDIRECT_URI,
         code_verifier: request.codeVerifier,
       });
 
       const tokenResponse = await fetch(discovery.tokenEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: params.toString(),
       });
 
       const tokenData = await tokenResponse.json();
-    //   setToken(tokenData.access_token);
-    //   console.log('Spotify Token:', tokenData);
-    // } catch (error) {
-    //   console.error('Token exchange error:', error);
-    // }
       if (tokenData.error) {
-        console.error('Spotify Token Error:', tokenData);
-      } else {
-        setToken(tokenData.access_token);
-        console.log('Spotify Token:', tokenData);
+        console.error("Spotify Token Error:", tokenData);
+        return;
       }
-      } catch (error) {
-        console.error('Token exchange error:', error);
+      console.log("Spotify Token:", tokenData);
+      const accessToken = tokenData.access_token;
+      const refreshToken = tokenData.refresh_token;
+
+      setLocalToken(accessToken); // local state if needed
+      setToken(accessToken); // update global context
+
+      // Fetch the Spotify user profile to get the Spotify User ID
+      const userProfileResponse = await fetch("https://api.spotify.com/v1/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const userProfile = await userProfileResponse.json();
+      if (!userProfile.id) {
+        console.error("Error fetching user profile:", userProfile);
+        return;
       }
+
+      const spotifyUserId = userProfile.id;
+      setSpotifyUserId(spotifyUserId);
+
+      // Authenticate user with Firebase (anonymous sign-in)
+      let firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+          const userCredential = await signInAnonymously(auth);
+          firebaseUser = userCredential.user;
+          console.log("Signed in Firebase user:", firebaseUser.uid);
+      }
+
+      
+
+      // Save token and user profile in Firebase Realtime Database
+      const userRef = ref(database, `users/${spotifyUserId}`);
+      await set(userRef, {
+        firebaseUID: firebaseUser.uid, // Store Firebase user ID
+        spotifyAccessToken: accessToken,
+        spotifyRefreshToken: refreshToken,
+        expiresAt: Date.now() + tokenData.expires_in * 1000,
+        userProfile, // store the full profile
+      });
+      console.log("User data stored in Firebase:", userProfile);
+    } catch (error) {
+      console.error("Token exchange error:", error);
+    }
   };
+
 
   const fetchUserProfile = async () => {
     try {
