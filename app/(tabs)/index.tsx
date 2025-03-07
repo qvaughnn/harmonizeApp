@@ -5,7 +5,7 @@ import * as AuthSession from 'expo-auth-session';
 import { useEffect, useState } from 'react';
 
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
-const REDIRECT_URI = 'harmonize-login://callback';
+const REDIRECT_URI = 'exp://10.140.46.209:8081';
 
 const SCOPES = ['user-read-private', 'user-read-email'];
 
