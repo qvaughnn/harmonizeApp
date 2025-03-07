@@ -1,15 +1,49 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Avatar} from 'react-native-paper';
+import { useState, useEffect, useContext } from 'react';
+// import { useAuth } from '../context/AuthContext'; 
 
 const Profile = () => {
+  // const { token, setToken } = useAuth(); 
+  const [userData, setUserData] = useState<any>(null);
+
+  useEffect(() => {
+    if (token) {
+      fetchUserProfile();
+    }
+  }, [token]);
+
+  const fetchUserProfile = async () => {
+    console.log("fetchUserProfile() called");
+    try {
+      const response = await fetch("https://api.spotify.com/v1/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setUserData(data);
+      } else {
+        console.error("Error fetching profile:", data);
+      }
+    } catch (error) {
+      console.error("User profile fetch error:", error);
+    }
+  };
+
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
         PROFILE
       </Text>
       <Avatar.Image style={styles.icon} size={180} source={require('../assets/images/avatar.png')} />
-      <Text variant="headlineSmall">@username</Text>
+      <Text variant="headlineSmall">@{userData?.display_name || "username"}</Text>
       <Button
         style={styles.updateButton}
         mode="elevated"
