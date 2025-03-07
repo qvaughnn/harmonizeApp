@@ -34,13 +34,26 @@ export default function HomeScreen() {
     }
   }, [response]);
 
+  useEffect(() => {
+    if (token) {
+        fetchUserProfile();
+    }
+}, [token]);
+
   const exchangeCodeForToken = async (code: string) => {
     try {
+
+      if (!request?.codeVerifier) {
+        console.error("Missing code verifier!");
+        return;
+      }
+
       const params = new URLSearchParams({
         client_id: CLIENT_ID,
         grant_type: 'authorization_code',
         code,
         redirect_uri: REDIRECT_URI,
+        code_verifier: request.codeVerifier,
       });
 
       const tokenResponse = await fetch(discovery.tokenEndpoint, {
@@ -50,12 +63,48 @@ export default function HomeScreen() {
       });
 
       const tokenData = await tokenResponse.json();
-      setToken(tokenData.access_token);
-      console.log('Spotify Token:', tokenData);
-    } catch (error) {
-      console.error('Token exchange error:', error);
-    }
+    //   setToken(tokenData.access_token);
+    //   console.log('Spotify Token:', tokenData);
+    // } catch (error) {
+    //   console.error('Token exchange error:', error);
+    // }
+      if (tokenData.error) {
+        console.error('Spotify Token Error:', tokenData);
+      } else {
+        setToken(tokenData.access_token);
+        console.log('Spotify Token:', tokenData);
+      }
+      } catch (error) {
+        console.error('Token exchange error:', error);
+      }
   };
+
+  const fetchUserProfile = async () => {
+    try {
+        if (!token) {
+            console.error("No access token available.");
+            return;
+        }
+
+        const response = await fetch("https://api.spotify.com/v1/me", {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`, // Use Bearer token for authentication
+                "Content-Type": "application/json",
+            },
+        });
+
+        const userData = await response.json();
+
+        if (response.ok) {
+            console.log("Spotify User Profile:", userData);
+        } else {
+            console.error("Error fetching profile:", userData);
+        }
+    } catch (error) {
+        console.error("User profile fetch error:", error);
+    }
+};
 
   return (
     <ThemedView style={styles.overall}>
