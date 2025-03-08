@@ -42,14 +42,13 @@ const Profile = () => {
       <Text variant="displayMedium" style={styles.title}>
         PROFILE
       </Text>
-      <Avatar.Image style={styles.icon} size={180} source={require('../assets/images/avatar.png')} />
-      <Text variant="headlineSmall">@{userData?.display_name || "username"}</Text>
-      <Button
-        style={styles.updateButton}
-        mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}>
-          Update Profile Picture
-      </Button>
+      {/* <Avatar.Image style={styles.icon} size={180} source={require('../assets/images/avatar.png')} /> */}
+      <Avatar.Image
+        style={styles.icon}
+        size={180}
+        source={userData?.images?.[0]?.url ? { uri: userData.images[0].url } : require('../assets/images/avatar.png')}
+      />
+      <Text style={styles.username} variant="headlineMedium">@{userData?.display_name || "username"}</Text>
       <Button
         icon="close"
         style={styles.logOutButton}
@@ -81,17 +80,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 160,
   },
-  updateButton:{
-    backgroundColor: '#d7acfc',
-    paddingVertical: 4,
-    paddingHorizontal: 5,
-    borderRadius: 30, // Fully rounded button
-    elevation: 5, // Adds shadow on Android
-    shadowColor: 'black', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    marginVertical: 6,
+  username:{
+    position: 'absolute',
+    top: 350,
   },
   logOutButton:{
     backgroundColor: 'grey',
