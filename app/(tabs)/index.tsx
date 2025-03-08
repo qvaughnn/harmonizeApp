@@ -11,7 +11,7 @@ import { app, database } from "../config/firebase";
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 const REDIRECT_URI = 'exp://10.140.46.209:8081';
-const SCOPES = ['user-read-private', 'user-read-email'];
+const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
 
 
 const discovery = {
