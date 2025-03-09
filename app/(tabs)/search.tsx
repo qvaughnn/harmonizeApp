@@ -3,57 +3,72 @@ import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Searchbar } from 'react-native-paper';
 import * as React from 'react';
 
+
 export default function TabTwoScreen() {
-  const [searchQuery, setSearchQuery] = React.useState('');
+ const [searchQuery, setSearchQuery] = React.useState('');
 
-  function handleSearchQueryChange(query: string): void {
-    setSearchQuery(query);
-  }
-  return (
-    <ThemedView style={styles.overall}>
-      <Text variant="displayMedium" style={styles.title}>
-        SEARCH
-      </Text>
 
-    <Searchbar
-      placeholder="Search Playlists, Friends, and Songs"
-      value={searchQuery}
-      onChangeText={handleSearchQueryChange}
-      style={styles.searchbar}
-    />
-    <Text variant="displayMedium" style={styles.subtitle}>
-        Recent Searches
-      </Text>
-    </ThemedView>
-  );
+ function handleSearchQueryChange(query: string): void {
+   setSearchQuery(query);
+ }
+ return (
+   <ThemedView style={styles.overall}>
+     <Text variant="displayMedium" style={styles.title}>
+       SEARCH
+     </Text>
+
+
+   <View style = {styles.searchContainer}>
+           <Searchbar
+             placeholder="Search Playlists, Friends, and Songs"
+             value={searchQuery}
+             onChangeText={handleSearchQueryChange}
+             style={styles.searchbar}
+           />
+         </View>
+   <View style={styles.subtitleContainer}>
+     <Text variant="displayMedium" style={styles.subtitle}>
+         Recent Searches
+       </Text>
+   </View>
+   </ThemedView>
+ );
 }
 
+
 const styles = StyleSheet.create({
-  overall: {
-    flex:1,
-    justifyContent: 'center',
-  },
-  title:{
-    color:'darkgrey',
-    position: 'absolute',
-    top: 80,
-    left: 25,
-    justifyContent: 'flex-start',
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  searchbar: {
-    width: '90%',
-    marginTop: -410,
-    marginBottom: 20,
-    alignSelf: 'center',
-  },
-  subtitle: {
-    color: 'darkgrey',
-    fontWeight: 'normal',
-    fontSize: 18,
-    textAlign: 'left',
-    left: 25, 
-  },
+ overall: {
+   alignItems: 'center',
+   flex:1,
+   justifyContent: 'flex-start',
+   paddingTop: 60,
+ },
+ title:{
+   fontWeight: 'bold',
+   color: 'darkgrey',
+   position: 'absolute',
+   top: 80,
+   left: 25,
+   justifyContent: 'flex-start',
+ },
+ searchContainer:{
+   marginTop:100,
+   width: '90%'
+ },
+ searchbar: {
+   width: '100%',
+   marginBottom: 20,
+ },
+ subtitleContainer: {
+   width: '100%',
+   paddingLeft: 25,
+ },
+ subtitle: {
+   color: 'darkgrey',
+   fontWeight: 'normal',
+   fontSize: 18,
+   textAlign: 'left'
+ },
+
 
 });
