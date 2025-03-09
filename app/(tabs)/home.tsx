@@ -98,6 +98,12 @@ export default function TabTwoScreen() {
           FRIENDS
         </Text>
       </Pressable>
+
+      <Image
+        source = {require('../../assets/images/add-icon.png')}
+        style = {styles.add_icon}
+      />
+
     </ThemedView>
   );
 }
@@ -152,6 +158,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     right: 20,
     top: 80,
+  },
+  add_icon: {
+    position: 'absolute',
+    justifyContent: 'flex-start',
+    height: 40,
+    width: 40,
+    top: 725,
+    right: 25,
   },
   cover: {
     // height: 230,

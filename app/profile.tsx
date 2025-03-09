@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   username:{
     position: 'absolute',
     top: 350,
-    color: 'darkgrey',
+    color: 'white',
   },
   logOutButton:{
     backgroundColor: 'grey',
