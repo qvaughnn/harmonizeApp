@@ -53,6 +53,10 @@ export default function TabTwoScreen() {
     router.push('/playlist');
   };
 
+  const handleAllPlaylistsPress = () => {
+    router.push('/allPlaylists');
+  }
+
   const handleFriendsPress = () => {
     router.push('/friends');
   };
@@ -67,13 +71,13 @@ export default function TabTwoScreen() {
         <Avatar.Image size={50} source={require('../../assets/images/avatar.png')} />
       </Pressable>
       
-      <Pressable onPress={handlePlaylistsPress} style={styles.subtitlePress}>
+      <Pressable onPress={handleAllPlaylistsPress} style={styles.subtitlePress}>
         <Text variant="headlineMedium" style = {styles.subtitle}>
           PLAYLISTS
         </Text>
       </Pressable>
 
-      <Pressable onPress={handlePlaylistsPress} style={styles.viewPress}>
+      <Pressable onPress={handleAllPlaylistsPress} style={styles.viewPress}>
         <Text style = {styles.view}>
           View all
         </Text>
