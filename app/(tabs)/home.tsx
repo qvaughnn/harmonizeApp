@@ -1,48 +1,94 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, Dimensions } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, Dimensions, Flatlist } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Avatar, Card} from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-// import Carousel from 'react-native-snap-carousel';
+import { useState, useEffect, useContext } from 'react';
 import Carousel from 'react-native-snap-carousel-v4';
 import Profile from '../profile';
 import Playlists from './allPlaylists';
 import Playlist from '../playlist';
 import Friends from './friends';
+import { getAuth, signInAnonymously } from "firebase/auth";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { width } = Dimensions.get('window');
 
-const images = [
-  { id: '1', uri: require('../../assets/images/coverSample.png') },
-  { id: '2', uri: require('../../assets/images/coverSample.png')},
-  { id: '3', uri: require('../../assets/images/coverSample.png') },
-  { id: '4', uri: require('../../assets/images/coverSample.png')},
-];
+const Home = () =>{
 
-const ImageCarousel = ({ onPress }: { onPress: () => void }) =>{
-  const renderItem = ({ item }: { item: { id: string; uri: any } }) => (
-    <Pressable onPress={onPress}>
-      <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
-        <Image source={item.uri} style={{ width: '100%', height: 270 }} resizeMode="cover" />
-      </Card>
-    </Pressable>
-  );
+  const { token, setToken } = useAuth(); 
+  // const [playlistsData, setPlaylistsData] = useState([]);
+  const [images, setImages] = useState<{ id: string; uri: string }[]>([]);
 
-  return (
-    <Carousel
-      data={images}
-      renderItem={renderItem}
-      sliderWidth={width}
-      itemWidth={width * 0.8}
-      loop={false}
-      autoplay={false}
-      scrollEnabled={true}
-      containerCustomStyle={{ marginTop: 220 }} 
-    />
-  );
-};
+  useEffect(() => {
+    if (token) {
+      fetchPlaylist();
+    }
+  }, [token]);
 
-export default function TabTwoScreen() {
+  const fetchPlaylist = async () => {
+    try {
+      const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+  
+      const data = await response.json();
+      // console.log('API Response:', JSON.stringify(data, null, 2));
+  
+      if (response.ok) {
+        const playlistsData = data.items || [];
+          const fetchedImages = playlistsData.map((playlist: any) => {
+            if (playlist.images && playlist.images.length > 0) {
+              console.log(playlist);
+              return {
+                id: playlist.id,
+                uri: playlist.images[0].url,
+              };
+            } else {
+              return {
+                id: playlist.id,
+                uri: require('../../assets/images/coverSample.png'),
+              };
+            }
+          });
+          setImages(fetchedImages) 
+      } else {
+        console.error("Error fetching playlists:", data);
+      }
+    } catch (error) {
+      console.error("Playlists fetch error:", error);
+    }
+  };
+
+  const ImageCarousel = ({ onPress }: { onPress: () => void }) =>{
+    const renderItem = ({ item }: { item: { id: string; uri: any } }) => (
+      <Pressable onPress={onPress}>
+        <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
+          <Image 
+            source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri}
+            style={{ width: '100%', height: 270 }} 
+            resizeMode="cover" 
+          />
+        </Card>
+      </Pressable>
+    );
+  
+    return (
+      <Carousel
+        data={images}
+        renderItem={renderItem}
+        sliderWidth={width}
+        itemWidth={width * 0.8}
+        loop={false}
+        autoplay={false}
+        scrollEnabled={true}
+        containerCustomStyle={{ marginTop: 220 }} 
+      />
+    );
+  };
 
   const router = useRouter();
 
@@ -86,14 +132,6 @@ export default function TabTwoScreen() {
 
       <ImageCarousel onPress={handlePlaylistsPress}/>
 
-{/* 
-      <Pressable>
-        <Image
-          source={require('../../assets/images/coverSample.png')}
-          style={styles.cover}
-        />
-      </Pressable> */}
-
       <Pressable onPress={handleFriendsPress} style = {styles.subtitlePress2}>
         <Text variant="headlineMedium" style = {styles.subtitle2}>
           FRIENDS
@@ -108,6 +146,8 @@ export default function TabTwoScreen() {
     </ThemedView>
   );
 }
+
+export default Home;
 
 const styles = StyleSheet.create({
   overall: {

@@ -2,14 +2,17 @@ import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'r
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Searchbar } from 'react-native-paper';
 import React from 'react';
+import { getAuth, signInAnonymously } from "firebase/auth";
+import { useAuth } from "../../contexts/AuthContext";
 
+const allPlaylists = () =>{
 
-export default function TabTwoScreen() {
- const [searchQuery, setSearchQuery] = React.useState('');
+  const { token, setToken } = useAuth(); 
+  const [searchQuery, setSearchQuery] = React.useState('');
   
-     function handleSearchQueryChange(query: string): void {
-       setSearchQuery(query);
-     }
+  function handleSearchQueryChange(query: string): void {
+    setSearchQuery(query);
+  }
  return (
    <ThemedView style={styles.overall}>
      <Text variant="displayMedium" style={styles.title}>
@@ -27,6 +30,7 @@ export default function TabTwoScreen() {
  );
 }
 
+export default allPlaylists;
 
 const styles = StyleSheet.create({
  overall: {
