@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { Image, StyleSheet, Dimensions, Pressable, View} from 'react-native';
 import { Text, Avatar, Card } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
@@ -54,12 +54,14 @@ export default function Home() {
 
   const renderCarouselItem = ({ item }: { item: { id: string; uri: any } }) => (
     <Pressable onPress={() => handlePlaylistPress(item.id)}>
-      <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
-        <Image
-          source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri}
-          style={{ width: '100%', height: 270 }}
-          resizeMode="cover"
-        />
+      <Card style={{ borderRadius: 10 }}>
+        <View style={{ borderRadius: 10, overflow: 'hidden' }}>
+          <Image
+            source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri}
+            style={{ width: '100%', height: 270 }}
+            resizeMode="cover"
+          />
+        </View>
       </Card>
     </Pressable>
   );
