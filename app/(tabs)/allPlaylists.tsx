@@ -1,37 +1,36 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button, Searchbar, List } from 'react-native-paper';
-import React from 'react';
-import { useState, useEffect, useContext } from 'react';
-import { getAuth, signInAnonymously } from "firebase/auth";
-import { useAuth } from "../../contexts/AuthContext";
+import { Text, Searchbar, List } from 'react-native-paper';
+import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
+import { useRouter } from 'expo-router';
 
-const AllPlaylists = () =>{
+type SpotifyItem = {
+  id: string;
+  name: string;
+  images?: { url: string }[];
+  uri: string | number;
+};
 
-  const { token, setToken } = useAuth(); 
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [results, setResults] = React.useState<SpotifyItem[]>([]);
+const AllPlaylists = () => {
+  const { token } = useAuth(); 
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState<SpotifyItem[]>([]);
   
-  type SpotifyItem = {
-    id: string;
-    name: string;
-    images?: { url: string }[];
-    uri: string | number;
-  };
-
   function handleSearchQueryChange(query: string): void {
     setSearchQuery(query);
   }
 
   useEffect(() => {
-      if (token) {
-        fetchPlaylist();
-      }
-    }, [token]);
+    if (token) {
+      fetchPlaylists();
+    }
+  }, [token]);
 
-  const fetchPlaylist = async () => {
+  const fetchPlaylists = async () => {
     try {
       const response = await fetch("https://api.spotify.com/v1/me/playlists", {
         method: "GET",
@@ -45,23 +44,22 @@ const AllPlaylists = () =>{
   
       if (response.ok) {
         const playlistsData = data.items || [];
-          const fetchedPlaylists = playlistsData.map((playlist: any) => {
-            if (playlist.name && playlist.images && playlist.images.length > 0) {
-              return {
-                id: playlist.id,
-                name: playlist.name,
-                uri: playlist.images[0].url,
-              };
-            } else {
-              return {
-                id: playlist.id,
-                name: playlist.name,
-                uri: require('../../assets/images/coverSample.png'),
-              };
-            }
-          });
-          // console.log("FETCHED PLAYLISTS: ", fetchedPlaylists);
-          setResults(fetchedPlaylists);
+        const fetchedPlaylists = playlistsData.map((playlist: any) => {
+          if (playlist.name && playlist.images && playlist.images.length > 0) {
+            return {
+              id: playlist.id,
+              name: playlist.name,
+              uri: playlist.images[0].url,
+            };
+          } else {
+            return {
+              id: playlist.id,
+              name: playlist.name,
+              uri: require('../../assets/images/coverSample.png'),
+            };
+          }
+        });
+        setResults(fetchedPlaylists);
       } else {
         console.error("Error fetching playlists:", data);
       }
@@ -70,94 +68,104 @@ const AllPlaylists = () =>{
     }
   };
 
- return (
-  <ThemedView style={styles.overall}>
-    <Text variant="displayMedium" style={styles.title}>
-      PLAYLISTS
-    </Text>
-    <View style = {styles.searchContainer}>
-      <Searchbar
-        placeholder="Search Playlists"
-        value={searchQuery}
-        onChangeText={handleSearchQueryChange}
-        style={styles.searchbar}
-      />
-    </View>
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <FlatList 
-        data={results} 
-        keyExtractor={(item: SpotifyItem) => item.id}
-        renderItem={({ item}: { item: SpotifyItem }) => (
-        <List.Item
-        title={item.name}
-        titleStyle={styles.name}
-        left={() =>
-          item.uri ? (
-            <Image source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} style={styles.thumbnail} />
-          ) : (
-            <List.Icon icon="music" />
-          )
-        }
-        right={() =>
-          <View style={styles.rightContainer}>
-          <Image
-            source={require('../../assets/images/arrow.png')}
-            style={styles.arrowIcon}
-          />
-          </View>
-        }
-      />
-    )}/>
-    </GestureHandlerRootView>
-  </ThemedView>
- );
-}
+  return (
+    <ThemedView style={styles.overall}>
+      <Text variant="displayMedium" style={styles.title}>
+        PLAYLISTS
+      </Text>
+      <View style={styles.searchContainer}>
+        <Searchbar
+          placeholder="Search Playlists"
+          value={searchQuery}
+          onChangeText={handleSearchQueryChange}
+          style={styles.searchbar}
+        />
+      </View>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <FlatList 
+          data={results} 
+          keyExtractor={(item: SpotifyItem) => item.id}
+          renderItem={({ item }: { item: SpotifyItem }) => (
+            <List.Item
+              // Navigate to the playlist page when pressed, passing the id
+              onPress={() => router.push(`/playlist?id=${item.id}`)}
+              // Use a custom title component to truncate long titles
+              title={() => (
+                <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+                  {item.name}
+                </Text>
+              )}
+              left={() =>
+                item.uri ? (
+                  <Image 
+                    source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} 
+                    style={styles.thumbnail} 
+                  />
+                ) : (
+                  <List.Icon icon="music" />
+                )
+              }
+              right={() => (
+                <View style={styles.rightContainer}>
+                  <Image
+                    source={require('../../assets/images/arrow.png')}
+                    style={styles.arrowIcon}
+                  />
+                </View>
+              )}
+            />
+          )}
+        />
+      </GestureHandlerRootView>
+    </ThemedView>
+  );
+};
 
 export default AllPlaylists;
 
 const styles = StyleSheet.create({
- overall: {
-   alignItems: 'center',
-   flex:1,
-   paddingTop: 60,
-   justifyContent: 'flex-start'
- },
- title:{
-   fontWeight: 'bold',
-   color: 'darkgrey',
-   position: 'absolute',
-   top: 80,
-   left: 25,
-   justifyContent: 'flex-start',
- },
- searchContainer:{
-   marginTop:100,
-   width: '90%'
- },
- searchbar: {
-   width: '100%',
-   marginBottom: 30,
- },
- rightContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
- },
- thumbnail: {
-  width: 80,
-  height: 80,
-  borderRadius: 4,
-  left:25
- },
- arrowIcon: {
-  width: 24,
-  height: 24,
-  right:10
- },
- name:{
-  left:25,
-  color: 'white',
-  fontSize: 18,
-  fontWeight: "bold"
- },
+  overall: {
+    alignItems: 'center',
+    flex: 1,
+    paddingTop: 60,
+    justifyContent: 'flex-start',
+  },
+  title: {
+    fontWeight: 'bold',
+    color: 'darkgrey',
+    position: 'absolute',
+    top: 80,
+    left: 25,
+  },
+  searchContainer: {
+    marginTop: 100,
+    width: '90%',
+  },
+  searchbar: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  rightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 4,
+    marginLeft: 25,
+  },
+  arrowIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
+  },
+  name: {
+    marginLeft: 3,
+    marginRight: 3, // reserve space for the arrow
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
