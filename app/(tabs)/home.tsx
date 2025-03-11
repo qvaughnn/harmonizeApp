@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { Image, StyleSheet, Dimensions, Pressable, View} from 'react-native';
 import { Text, Avatar, Card } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
@@ -18,6 +18,12 @@ export default function Home() {
       fetchPlaylists();
     }
   }, [token]);
+
+  const friends = [
+    {name: 'Alice', playlists: 4, avatar:require('../../assets/images/avatar.png')},
+    {name: 'Charlie', playlists: 2, avatar:require('../../assets/images/avatar.png')},
+    {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')}, 
+  ]
 
   const fetchPlaylists = async () => {
     try {
@@ -104,6 +110,20 @@ export default function Home() {
         </Text>
       </Pressable>
 
+      <View style = {styles.listContainer}>
+          {friends.map((friend,index) =>(
+            <Card key={index} style={styles.friendCard}>
+              <View style = {styles.friendInfo}>
+                <Avatar.Image size={40} source = {friend.avatar}/>
+                <View style = {styles.textContainer}>
+                  <Text style = {styles.friendName}> {friend.name}</Text>
+                  <Text style = {styles.playlistText}> {friend.playlists} playlists</Text>
+                </View>
+              </View> 
+            </Card>
+          ))}
+        </View>
+
       <Image
         source={require('../../assets/images/add-icon.png')}
         style={styles.add_icon}
@@ -161,5 +181,39 @@ const styles = StyleSheet.create({
     width: 40,
     bottom: 100,
     right: 25,
+  },
+  listContainer:{
+    width: '100%',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    marginTop: 550,
+    position: 'absolute',
+    left: 25
+  },
+  friendCard:{
+    width: '70%',
+    height: 50,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderWidth: 1,
+    marginBottom: 15,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 10,
+  },
+  friendInfo:{
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textContainer:{
+    marginLeft:12,
+  },
+  friendName:{
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white'
+  },
+  playlistText:{
+    fontSize: 14,
+    color: 'white'
   },
 });
