@@ -118,7 +118,9 @@ export default function TabTwoScreen() {
           renderItem={({ item}: { item: SpotifyItem }) => (
           <List.Item
           title={item.name}
+          titleStyle={styles.name}
           description={item.artists ? item.artists.map((artist: { name: any; }) => artist.name).join(', ') : 'Playlist'}
+          descriptionStyle={styles.description}
           left={() =>
             item.images && item.images.length > 0 ? (
               <Image source={{ uri: item.images[0].url }} style={styles.thumbnail} />
@@ -141,11 +143,11 @@ export default function TabTwoScreen() {
 
 
          
-   <View style={styles.subtitleContainer}>
+   {/* <View style={styles.subtitleContainer}>
      <Text variant="displayMedium" style={styles.subtitle}>
          Recent Searches
        </Text>
-   </View>
+   </View> */}
    </ThemedView>
  );
 }
@@ -153,41 +155,50 @@ export default function TabTwoScreen() {
 
 const styles = StyleSheet.create({
  overall: {
-   alignItems: 'center',
-   flex:1,
-   justifyContent: 'flex-start',
-   paddingTop: 60,
+  alignItems: 'center',
+  flex:1,
+  justifyContent: 'flex-start',
+  paddingTop: 60,
  },
  title:{
-   fontWeight: 'bold',
-   color: 'darkgrey',
-   position: 'absolute',
-   top: 80,
-   left: 25,
-   justifyContent: 'flex-start',
+  fontWeight: 'bold',
+  color: 'darkgrey',
+  position: 'absolute',
+  top: 80,
+  left: 25,
+  justifyContent: 'flex-start',
  },
  searchContainer:{
-   marginTop:100,
-   width: '90%'
+  marginTop:100,
+  width: '90%'
  },
  searchbar: {
-   width: '100%',
-   marginBottom: 20,
+  width: '100%',
+  marginBottom: 20,
  },
  subtitleContainer: {
-   width: '100%',
-   paddingLeft: 25,
+  width: '100%',
+  paddingLeft: 25,
  },
  subtitle: {
-   color: 'darkgrey',
-   fontWeight: 'normal',
-   fontSize: 18,
-   textAlign: 'left'
+  color: 'darkgrey',
+  fontWeight: 'normal',
+  fontSize: 18,
+  textAlign: 'left'
+ },
+ name:{
+  left:25,
+  color: 'white'
+ },
+ description:{
+  left:25,
+  color:'grey'
  },
  thumbnail: {
-   width: 50,
-   height: 50,
-   borderRadius: 4,
+  width: 50,
+  height: 50,
+  borderRadius: 4,
+  left:25
  },
  rightContainer: {
   flexDirection: 'row',
@@ -196,9 +207,7 @@ const styles = StyleSheet.create({
   paddingRight: 16, 
   },
  add_icon: {
-    width: 24, // Adjust size as needed
-    height: 24,
+  width: 24, // Adjust size as needed
+  height: 24,
  },
-
-
 });

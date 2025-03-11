@@ -41,6 +41,7 @@ const ImageCarousel = ({ onPress }: { onPress: () => void }) =>{
     />
   );
 };
+
 export default function TabTwoScreen() {
 
   const router = useRouter();
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     height: 40,
     width: 40,
-    top: 725,
+    bottom:100,
     right: 25,
   },
   cover: {
