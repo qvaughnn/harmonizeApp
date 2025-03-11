@@ -124,48 +124,49 @@ const AllPlaylists = () => {
 export default AllPlaylists;
 
 const styles = StyleSheet.create({
-  overall: {
-    alignItems: 'center',
-    flex: 1,
-    paddingTop: 60,
-    justifyContent: 'flex-start',
-  },
-  title: {
-    fontWeight: 'bold',
-    color: 'darkgrey',
-    position: 'absolute',
-    top: 80,
-    left: 25,
-  },
-  searchContainer: {
-    marginTop: 100,
-    width: '90%',
-  },
-  searchbar: {
-    width: '100%',
-    marginBottom: 30,
-  },
-  rightContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 4,
-    marginLeft: 25,
-  },
-  arrowIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 10,
-  },
-  name: {
-    marginLeft: 3,
-    marginRight: 3, // reserve space for the arrow
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+ overall: {
+   alignItems: 'center',
+   flex:1,
+   paddingTop: 60,
+   justifyContent: 'flex-start'
+ },
+ title:{
+   fontWeight: 'bold',
+   color: 'darkgrey',
+   position: 'absolute',
+   top: 80,
+   left: 25,
+   justifyContent: 'flex-start',
+ },
+ searchContainer:{
+   marginTop:100,
+   width: '90%'
+ },
+ searchbar: {
+   width: '100%',
+   marginBottom: 30,
+ },
+ rightContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+ },
+ thumbnail: {
+  width: 80,
+  height: 80,
+  borderRadius: 4,
+  left:25
+ },
+ arrowIcon: {
+  width: 24,
+  height: 24,
+  right:10
+ },
+ name:{
+  left:25,
+  color: 'white',
+  width: '80%',
+  fontSize: 30,
+  fontWeight: "bold"
+ },
 });

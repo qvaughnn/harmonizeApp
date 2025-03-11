@@ -21,9 +21,7 @@ export default function TabTwoScreen() {
      {name: 'Charlie', playlists: 2, avatar:require('../../assets/images/avatar.png')},
      {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')},
      {name: 'Julie', playlists: 5, avatar:require('../../assets/images/avatar.png')},
-     {name: 'Cameron', playlists: 3, avatar:require('../../assets/images/avatar.png')},
-    
-    
+     {name: 'Cameron', playlists: 3, avatar:require('../../assets/images/avatar.png')}    
    ]
 
 
@@ -87,8 +85,6 @@ const styles = StyleSheet.create({
    flexWrap: 'wrap',
    paddingHorizontal: 20,
  },
-
-
  friendCard:{
    width: '70%',
    height: 50, //adjusts the friend tile height
@@ -99,8 +95,6 @@ const styles = StyleSheet.create({
    justifyContent: 'center',
    alignItems: 'flex-start',
    paddingLeft: 10,
-
-
  },
  friendInfo:{
    flexDirection: 'row',

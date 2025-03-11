@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Image, FlatList, Pressable } from 'react-native';
 import { Text, ActivityIndicator, Divider, IconButton } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext'; // Adjust path as needed
+import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function PlaylistScreen() {
   const router = useRouter();
   const { token } = useAuth();
-  const { id: playlistId } = useLocalSearchParams(); // if you did /playlist?id=123
+  const { id: playlistId } = useLocalSearchParams();
 
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -41,9 +41,8 @@ export default function PlaylistScreen() {
   };
 
   const renderTrackItem = ({ item }: { item: any }) => {
-    // Each "item" in playlist.tracks.items is typically { track: { ...trackData } }
     const track = item.track;
-    if (!track) return null; // In case of local or unavailable tracks
+    if (!track) return null;
 
     return (
       <View style={styles.trackItem}>
@@ -70,21 +69,20 @@ export default function PlaylistScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      {/* Header */}
+    <ThemedView style={styles.overall}>
       <View style={styles.headerContainer}>
         <IconButton
           icon="arrow-left"
           size={30}
           onPress={() => router.back()}
           style={styles.backButton}
+          iconColor="grey"
         />
-        <Text variant="headlineLarge" style={styles.playlistTitle}>
+        <Text style={styles.playlistTitle}>
           {playlist.name}
         </Text>
       </View>
 
-      {/* Cover + Info */}
       <View style={styles.coverContainer}>
         {playlist.images && playlist.images[0] && (
           <Image
@@ -92,19 +90,16 @@ export default function PlaylistScreen() {
             style={styles.coverImage}
           />
         )}
-        <View style={styles.playlistInfo}>
+        <View>
           <Text style={styles.owner}>
             By {playlist.owner?.display_name || 'Unknown'}
           </Text>
-          {playlist.description ? (
+          {/* {playlist.description ? (
             <Text style={styles.description}>{playlist.description}</Text>
-          ) : null}
+          ) : null} */}
         </View>
       </View>
 
-      <Divider style={styles.divider} />
-
-      {/* Tracks List */}
       <FlatList
         data={playlist.tracks?.items || []}
         renderItem={renderTrackItem}
@@ -119,49 +114,44 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  container: {
+  overall: {
     flex: 1,
     paddingTop: 60,
   },
   headerContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
   },
   backButton: {
-    marginLeft: 10,
+    // marginLeft: 10,
   },
   playlistTitle: {
     fontWeight: 'bold',
-    marginLeft: 10,
+    color: 'white',
+    fontSize: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '80%'
   },
   coverContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
     marginHorizontal: 20,
   },
   coverImage: {
-    width: 120,
-    height: 120,
+    width: 220,
+    height: 220,
     borderRadius: 5,
-    marginRight: 15,
-  },
-  playlistInfo: {
-    flex: 1,
-    justifyContent: 'center',
+    marginVertical: 12,
+    resizeMode: 'contain'
   },
   owner: {
     color: 'white',
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 5,
-  },
-  description: {
-    color: 'white',
-    fontStyle: 'italic',
-  },
-  divider: {
-    marginVertical: 10,
+    marginBottom: 25,
   },
   trackList: {
     paddingHorizontal: 20,
