@@ -157,7 +157,8 @@ const styles = StyleSheet.create({
  name:{
   left:25,
   color: 'white',
-  fontSize: 18,
+  width: '80%',
+  fontSize: 30,
   fontWeight: "bold"
  },
 });
