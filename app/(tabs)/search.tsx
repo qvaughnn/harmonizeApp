@@ -216,10 +216,11 @@ const styles = StyleSheet.create({
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'center',
-  paddingRight: 16, 
+  paddingRight: 34,  
  },
  add_icon: {
   width: 24, // Adjust size as needed
   height: 24,
+  right: -24
  },
 });

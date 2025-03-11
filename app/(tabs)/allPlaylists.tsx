@@ -162,11 +162,11 @@ const styles = StyleSheet.create({
   height: 24,
   right:10
  },
- name:{
-  left:25,
+name:{
+  left: 20,
   color: 'white',
-  width: '80%',
-  fontSize: 30,
+  width: '87%',
+  fontSize: 18,
   fontWeight: "bold"
  },
 });
