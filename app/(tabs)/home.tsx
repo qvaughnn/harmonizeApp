@@ -42,7 +42,7 @@ const Home = () =>{
         const playlistsData = data.items || [];
           const fetchedImages = playlistsData.map((playlist: any) => {
             if (playlist.images && playlist.images.length > 0) {
-              console.log(playlist);
+              // console.log(playlist);
               return {
                 id: playlist.id,
                 uri: playlist.images[0].url,

@@ -137,9 +137,8 @@ export default function TabTwoScreen() {
             </View>
           }
         />
-      )}
-    />
-  </GestureHandlerRootView>
+      )}/>
+    </GestureHandlerRootView>
 
 
          
@@ -205,7 +204,7 @@ const styles = StyleSheet.create({
   alignItems: 'center',
   justifyContent: 'center',
   paddingRight: 16, 
-  },
+ },
  add_icon: {
   width: 24, // Adjust size as needed
   height: 24,
