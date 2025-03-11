@@ -60,12 +60,14 @@ export default function Home() {
 
   const renderCarouselItem = ({ item }: { item: { id: string; uri: any } }) => (
     <Pressable onPress={() => handlePlaylistPress(item.id)}>
-      <Card style={{ borderRadius: 10, overflow: 'hidden' }}>
-        <Image
-          source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri}
-          style={{ width: '100%', height: 270 }}
-          resizeMode="cover"
-        />
+      <Card style={{ borderRadius: 10 }}>
+        <View style={{ borderRadius: 10, overflow: 'hidden' }}>
+          <Image
+            source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri}
+            style={{ width: '100%', height: 270 }}
+            resizeMode="cover"
+          />
+        </View>
       </Card>
     </Pressable>
   );

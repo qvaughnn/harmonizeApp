@@ -7,22 +7,15 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 import { useAuth } from "../../contexts/AuthContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-const auth = getAuth();
-const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
-const REDIRECT_URI = 'exp://10.140.46.209:8081';
-const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
-
-
-const discovery = {
-  authorizationEndpoint: 'https://accounts.spotify.com/authorize',
-  tokenEndpoint: 'https://accounts.spotify.com/api/token',
-};
-
 type SpotifyItem = {
   id: string;
   name: string;
+  type: string;
   artists?: { name: string }[];
   images?: { url: string }[];
+  album?: {
+    images: { url: string }[];
+  };
 };
 
 export default function TabTwoScreen() {
@@ -49,6 +42,8 @@ export default function TabTwoScreen() {
   try {
     setLoading(true);
     const response = await fetch(
+      
+      // `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=2`
       `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`,
       {
         method: 'GET',
@@ -75,11 +70,11 @@ export default function TabTwoScreen() {
     }
 
     const results = [
+      ...(data.tracks?.items || []),
       ...(data.artists?.items || []),
       ...(data.albums?.items || []),
-      ...(data.tracks?.items || []),
     ];
-
+    console.log(results);
     setResults(results);
   } catch (error) {
     console.error("Error fetching Spotify search:", error);
@@ -119,11 +114,29 @@ export default function TabTwoScreen() {
           <List.Item
           title={item.name}
           titleStyle={styles.name}
-          description={item.artists ? item.artists.map((artist: { name: any; }) => artist.name).join(', ') : 'Playlist'}
+          description={
+            item.type === 'artist'
+              ? 'Artist'
+              : item.type === 'album'
+              ? `Album - ${item.artists?.map((artist) => artist.name).join(', ')}`
+              : item.type === 'track'
+              ? `Song - ${item.artists?.map((artist) => artist.name).join(', ')}`
+              : ''
+          }
           descriptionStyle={styles.description}
           left={() =>
-            item.images && item.images.length > 0 ? (
-              <Image source={{ uri: item.images[0].url }} style={styles.thumbnail} />
+            (item.images && item.images.length > 0) || (item.album && item.album.images && item.album.images.length > 0) ? (
+              <Image 
+                source={{
+                  uri:
+                    item.type === 'track' && item.album?.images?.length
+                      ? item.album.images[0].url
+                      : item.images && item.images.length > 0
+                      ? item.images[0].url
+                      : 'fallback_image_url'
+              }}
+              style={styles.thumbnail}
+            />
             ) : (
               <List.Icon icon="music" />
             )
