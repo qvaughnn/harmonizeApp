@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Searchbar, List } from 'react-native-paper';
 import * as React from 'react';
@@ -88,6 +88,12 @@ export default function TabTwoScreen() {
   }
 }
 
+  const handleAdd = (item : SpotifyItem) => {
+    console.log("Adding song: $(item.name) by ")
+
+    //add to playlist API call
+  }
+
 
  return (
    <ThemedView style={styles.overall}>
@@ -119,6 +125,14 @@ export default function TabTwoScreen() {
             ) : (
               <List.Icon icon="music" />
             )
+          }
+          right={() =>
+            <View style={styles.rightContainer}>
+            <Image
+              source={require('../../assets/images/add-icon.png')}
+              style={styles.add_icon}
+            />
+            </View>
           }
         />
       )}
@@ -174,6 +188,16 @@ const styles = StyleSheet.create({
    width: 50,
    height: 50,
    borderRadius: 4,
+ },
+ rightContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingRight: 16, 
+  },
+ add_icon: {
+    width: 24, // Adjust size as needed
+    height: 24,
  },
 
 
