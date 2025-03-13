@@ -112,6 +112,10 @@ export default function Home() {
         </Text>
       </Pressable>
 
+      <Pressable onPress={() => router.push('/allPlaylists')} style={styles.viewPress2}>
+        <Text style={styles.view}>View all</Text>
+      </Pressable>
+
       <View style = {styles.listContainer}>
           {friends.map((friend,index) =>(
             <Card key={index} style={styles.friendCard}>
@@ -176,6 +180,11 @@ const styles = StyleSheet.create({
   subtitle2: {
     fontWeight: 'bold',
     color: 'white',
+  },
+  viewPress2: {
+    position: 'absolute',
+    top: 500,
+    right: 25,
   },
   add_icon: {
     position: 'absolute',
