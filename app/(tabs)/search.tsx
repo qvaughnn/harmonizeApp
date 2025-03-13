@@ -99,7 +99,7 @@ export default function TabTwoScreen() {
 
     <View style = {styles.searchContainer}>
            <Searchbar
-             placeholder="Search Playlists, Friends, and Songs"
+             placeholder="Search Songs, Albums, and Artists"
              value={searchQuery}
              onChangeText={handleSearchQueryChange}
              style={styles.searchbar}
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   paddingRight: 34,  
  },
  add_icon: {
-  width: 24, // Adjust size as needed
+  width: 24, 
   height: 24,
   right: -24
  },
