@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Dimensions, Pressable, View} from 'react-native';
+import { Image, StyleSheet, Dimensions, Pressable, View, Modal, Button} from 'react-native';
 import { Text, Avatar, Card } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
@@ -84,6 +84,12 @@ export default function Home() {
     />
   );
 
+  const [modalVisbile, setModalVisible] = useState(false);
+
+  const toggleModal = () => {
+    setModalVisible(!modalVisbile);
+  }
+
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
@@ -112,7 +118,7 @@ export default function Home() {
         </Text>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/allPlaylists')} style={styles.viewPress2}>
+      <Pressable onPress={() => router.push('/(tabs)/friends')} style={styles.viewPress2}>
         <Text style={styles.view}>View all</Text>
       </Pressable>
 
@@ -130,10 +136,28 @@ export default function Home() {
           ))}
         </View>
 
-      <Image
-        source={require('../../assets/images/add-icon.png')}
-        style={styles.add_icon}
-      />
+      <Pressable onPress={toggleModal}>
+          <Image
+            source={require('../../assets/images/add-icon.png')}
+            style={styles.add_icon}
+          />
+      </Pressable>
+
+      <Modal
+        animationType = 'fade'
+        transparent = {true}
+        visible = {modalVisbile}
+        onRequestClose={toggleModal} // handles back button
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>Create a playlist</Text>
+            <Button title="Close" onPress={toggleModal} />
+          </View>
+        </View>
+
+      </Modal>
+      
     </ThemedView>
   );
 }
@@ -166,7 +190,7 @@ const styles = StyleSheet.create({
   },
   viewPress: {
     position: 'absolute',
-    top: 170,
+    top: 185,
     right: 25,
   },
   view: {
@@ -183,7 +207,7 @@ const styles = StyleSheet.create({
   },
   viewPress2: {
     position: 'absolute',
-    top: 500,
+    top: 515,
     right: 25,
   },
   add_icon: {
@@ -191,7 +215,7 @@ const styles = StyleSheet.create({
     height: 40,
     width: 40,
     bottom: 100,
-    right: 25,
+    left: 140,
   },
   listContainer:{
     width: '100%',
@@ -226,5 +250,29 @@ const styles = StyleSheet.create({
   playlistText:{
     fontSize: 14,
     color: 'white'
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+  },
+  modalView: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
   },
 });
