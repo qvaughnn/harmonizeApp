@@ -68,6 +68,10 @@ export default function PlaylistScreen() {
     );
   }
 
+  const toggleExport = () => {
+
+  }
+
   return (
     <ThemedView style={styles.overall}>
       <View style={styles.headerContainer}>
@@ -92,12 +96,17 @@ export default function PlaylistScreen() {
         )}
         <View>
           <Text style={styles.owner}>
-            By {playlist.owner?.display_name || 'Unknown'}
+            Harmonizer: {playlist.owner?.display_name || 'Unknown'}
           </Text>
           {/* {playlist.description ? (
             <Text style={styles.description}>{playlist.description}</Text>
           ) : null} */}
         </View>
+
+        <Pressable onPress={() => router.push('/friends')}>
+          <Text style={styles.export}>Export</Text>
+        </Pressable>
+
       </View>
 
       <FlatList
@@ -151,7 +160,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 25,
+    marginBottom: 10,
+  },
+  export: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    marginBottom: 20,
   },
   trackList: {
     paddingHorizontal: 20,
