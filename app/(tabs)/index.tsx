@@ -7,6 +7,7 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
 import { app, database } from "../config/firebase";
+import { signInWithApple } from "../services/AppleAuth";
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
@@ -162,7 +163,14 @@ export default function HomeScreen() {
         icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>} 
         style={styles.appleButton} 
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:17, }}>
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:17, }}
+        onPress={async () => {
+          const user = await signInWithApple(); // ✅ Calls Apple Sign-In
+          if (user) {
+            console.log("Apple User:", user);
+          }
+        }}
+>
           LOG IN WITH APPLE MUSIC
       </Button>
     </ThemedView>
