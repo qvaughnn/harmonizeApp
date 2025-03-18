@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text, Searchbar, List } from 'react-native-paper';
+import { Text, Searchbar, List, Button } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
@@ -68,11 +68,21 @@ const AllPlaylists = () => {
     }
   };
 
+  const addPlaylist = () => {
+
+  };
+
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
         PLAYLISTS
       </Text>
+      <Button>
+        icon = "plus"
+        mode = "contained"
+        top: 80
+      </Button>
+
       <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Search Playlists"
