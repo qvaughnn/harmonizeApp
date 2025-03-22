@@ -4,6 +4,108 @@ import { Text, ActivityIndicator, Divider, IconButton } from 'react-native-paper
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
+import { app, database } from "./config/firebase";
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+
+interface Playlist {
+  name: string;
+  author: string;
+  songs: string[];
+}
+
+// creates a new playlist with the given name, author, and image and returns the key of the new playlist
+async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
+  const playlistsRef = ref(database, "playlists");
+
+  // generates unique id for playlist
+  const newPlaylistRef = push(playlistsRef);
+
+  const playlistData = {
+    name: name,
+    author: author,
+    image: image,
+    // can add more fields later
+  }
+
+  // Set the playlist data at the new location
+  set(newPlaylistRef, playlistData)
+    .then(() => {
+      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding playlist: ", error);
+    });
+
+  return newPlaylistRef.key;
+}
+
+// adds song to given playlist, only takes spotify id for now
+async function addSong(playlistRef: DatabaseReference, spotifyId: string) {
+  const songsRef = child(playlistRef, "songs/spotify");
+
+  // generates unique id for song
+  const newSongRef = push(songsRef);
+
+  const songData = {
+    spotifyId: spotifyId, 
+    // can add more data if we want later
+  }
+
+  // Set the playlist data at the new location
+  set(newSongRef, songData)
+    .then(() => {
+      console.log("Song added successfully with ID: ", newSongRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding song: ", error);
+    });
+}
+
+// gets all playlists by user and returns them as an array of key strings
+async function getPlaylistIdsByAuthor(userId: string): Promise<string[]> {
+  const playlistsRef = ref(database, "playlists")
+
+  // Create a query to filter playlists by author
+  const playlistsByAuthorQuery = query(
+    playlistsRef,
+    orderByChild('author'),
+    equalTo(userId)
+  );
+
+  try {
+    const snapshot: DataSnapshot = await get(playlistsByAuthorQuery);
+
+    const playlistIds: string[] = [];
+    snapshot.forEach((childSnapshot) => {
+      playlistIds.push(childSnapshot.key as string); // Just get the key (ID)
+    });
+
+    return playlistIds;
+  } catch (error) {
+    console.error("Error getting playlist IDs by author: ", error);
+    return [];
+  }
+}
+
+// gets playlist info given id and returns a Playlist (see interface at top)
+async function getPlaylistInfo(playlistId: string): Promise<Playlist | null> {
+  const playlistRef = ref(database, `playlists/${playlistId}`); // Reference to the specific playlist
+
+  try {
+    const snapshot: DataSnapshot = await get(playlistRef);
+
+    if (snapshot.exists()) {
+      const playlistData = snapshot.val() as Playlist; // Type assertion to Playlist
+      return playlistData;
+    } else {
+      console.log("Playlist not found with ID:", playlistId);
+      return null; // Playlist not found
+    }
+  } catch (error) {
+    console.error("Error getting playlist info: ", error);
+    return null; // Return null in case of an error
+  }
+}
 
 export default function PlaylistScreen() {
   const router = useRouter();
