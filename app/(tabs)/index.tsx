@@ -11,7 +11,7 @@ import { app, database } from "../config/firebase";
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
-const REDIRECT_URI = 'exp://192.168.1.6:8081';
+const REDIRECT_URI = 'exp://10.141.174.39:8081';
 const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
 
 
@@ -52,7 +52,7 @@ async function getSpotifyUserCode(id: string): Promise<string | null> {
 
   if (snapshot.exists()) {
     for (const username in snapshot.val()) {
-      const userProfileRef = child(usersRef, `${username}/userProfile/id`);
+      const userProfileRef = child(usersRef, `${username}/Spotify/userProfile/id`);
       const userProfileSnapshot = await get(userProfileRef);
 
       if (userProfileSnapshot.exists() && userProfileSnapshot.val() === id) {
@@ -146,18 +146,24 @@ export default function HomeScreen() {
 
       // check if Spotify user exists
       let userCode = null
-      try{
+      try {
         userCode = await getSpotifyUserCode(userProfile.id)
-      } catch (error) {
+      } catch (error: unknown) {
         // ERROR HERE
-        console.error("Error getting Spotify id", error)
+        console.log("id:", userProfile.id);
+
+        if (error instanceof Error) {
+          console.error("Error getting Spotify ID:", error.message);
+        } else {
+          console.error("An unknown error occurred:", error);
+        }
       }
       // If user doesn't exist, generate their code
       if (userCode == null) {
         let unique = false;
         while (!unique) {
           userCode = generateUsername();
-          unique = await checkUsernameUniqueness(userCode)
+          unique = !(await checkUsernameUniqueness(userCode))
         }
         console.log("User created:", userCode)
       }
