@@ -19,9 +19,20 @@ const AllPlaylists = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SpotifyItem[]>([]);
+  const [filteredResults, setFilteredResults] = useState<SpotifyItem[]>([]);
   
   function handleSearchQueryChange(query: string): void {
     setSearchQuery(query);
+
+    if (query.trim()=== ''){
+      setFilteredResults(results);
+    } else{
+      setFilteredResults(
+        results.filter((playlist) =>
+          playlist.name.toLowerCase().includes(query.toLowerCase())
+        )
+      )
+    }
   }
 
   useEffect(() => {
@@ -60,6 +71,7 @@ const AllPlaylists = () => {
           }
         });
         setResults(fetchedPlaylists);
+        setFilteredResults(fetchedPlaylists);
       } else {
         console.error("Error fetching playlists:", data);
       }
