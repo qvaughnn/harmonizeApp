@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text, Searchbar, List, Button } from 'react-native-paper';
+import { Text, Searchbar, List, IconButton, Button, Portal, Dialog, DialogActionsProps, Modal, TextInput, PaperProvider } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
@@ -68,20 +68,44 @@ const AllPlaylists = () => {
     }
   };
 
-  const addPlaylist = () => {
+  const [visible, setVisible] = useState(false);
+  const [text, setText] = useState('');
 
-  };
+  const showPopup = () => setVisible(true);
+  const hidePopup = () => setVisible(false);
 
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
         PLAYLISTS
       </Text>
-      <Button>
-        icon = "plus"
-        mode = "contained"
-        top: 80
-      </Button>
+      
+    <PaperProvider>
+    <IconButton
+            icon="plus-circle-outline"
+            size={40}
+            onPress={showPopup}
+            style={styles.addIcon}
+            iconColor="grey"
+          />
+      <View>
+          <Portal>
+            <Modal visible={visible} onDismiss={hidePopup} contentContainerStyle={styles.popup}>
+              <Text>Playlist Name:</Text>
+              <TextInput
+                mode="outlined"
+                value={text}
+                onChangeText={text => setText(text)}
+              />
+              <Button mode="contained" onPress={hidePopup}>
+                Create
+              </Button>
+            </Modal>
+          </Portal>
+        </View>
+      </PaperProvider>
+
+        
 
       <View style={styles.searchContainer}>
         <Searchbar
@@ -140,6 +164,11 @@ const styles = StyleSheet.create({
    paddingTop: 60,
    justifyContent: 'flex-start'
  },
+ popup: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+ },
  title:{
    fontWeight: 'bold',
    color: 'darkgrey',
@@ -149,7 +178,7 @@ const styles = StyleSheet.create({
    justifyContent: 'flex-start',
  },
  searchContainer:{
-   marginTop:100,
+   marginTop: 33,
    width: '90%'
  },
  searchbar: {
@@ -171,6 +200,10 @@ const styles = StyleSheet.create({
   width: 24,
   height: 24,
   right:10
+ },
+ addIcon: {
+  left: 150,
+  top: 15
  },
 name:{
   left: 20,

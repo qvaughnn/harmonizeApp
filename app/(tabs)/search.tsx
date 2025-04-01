@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button, Searchbar, List } from 'react-native-paper';
+import { Text , TextInput, Button, Searchbar, List, IconButton } from 'react-native-paper';
 import * as React from 'react';
 import { FlatList } from 'react-native-gesture-handler';
 import { getAuth, signInAnonymously } from "firebase/auth";
@@ -89,6 +89,11 @@ export default function TabTwoScreen() {
     //add to playlist API call
   }
 
+  // handles adding a song to a playlist
+  const handleAddSong = () => {
+      
+  };
+
 
  return (
    <ThemedView style={styles.overall}>
@@ -143,10 +148,13 @@ export default function TabTwoScreen() {
           }
           right={() =>
             <View style={styles.rightContainer}>
-            <Image
-              source={require('../../assets/images/add-icon.png')}
-              style={styles.add_icon}
-            />
+              <IconButton
+                icon="plus-circle-outline"
+                size={30}
+                onPress={handleAddSong}
+                style={styles.add_icon}
+                iconColor="black"
+              />
             </View>
           }
         />
@@ -219,8 +227,8 @@ const styles = StyleSheet.create({
   paddingRight: 34,  
  },
  add_icon: {
-  width: 24, 
-  height: 24,
+  width: 30, 
+  height: 30,
   right: -24
  },
 });
