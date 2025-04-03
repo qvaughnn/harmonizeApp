@@ -105,6 +105,9 @@ export default function TabTwoScreen() {
 
 
 
+  function addNewPlaylist() {
+  }
+
  return (
    <ThemedView style={styles.overall}>
      <Text variant="displayMedium" style={styles.title}>
@@ -180,6 +183,7 @@ export default function TabTwoScreen() {
       <View style={styles.modalOverlay}>
         <ThemedView style={styles.modalContent}>
           <Text variant="headlineMedium" style={styles.addTitle}>Add to Playlist</Text>
+          <Button onPress={addNewPlaylist} style= {styles.newPlaylistButton} labelStyle={{color: 'black'}}>New Playlist</Button>
           <Button onPress={closeModal}>Close</Button>
         </ThemedView>
       </View>
@@ -264,8 +268,16 @@ modalContent: {
   alignItems: 'center',
 },
 addTitle: {
-  fontWeight: 'bold',
-  color: 'darkgrey',
-  fontSize: 24,
+  color: 'white',
+  fontSize: 20,
+  marginBottom: 20,
+},
+newPlaylistButton: {
+  backgroundColor: 'white',
+  marginBottom: 20,
+  width: '50%',
+  paddingVertical: 10,
+  borderRadius: 30,
+  height: 60,
 },
 });
