@@ -1,5 +1,5 @@
-import { Image, StyleSheet, Dimensions, Pressable, View, Modal, Button} from 'react-native';
-import { Text, Avatar, Card } from 'react-native-paper';
+import { Image, StyleSheet, Dimensions, Pressable, View } from 'react-native';
+import { Text, Avatar, Card, PaperProvider, Modal, Button, IconButton, Portal, TextInput} from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
 import { useAuth } from '../../contexts/AuthContext';
@@ -90,7 +90,14 @@ export default function Home() {
     setModalVisible(!modalVisbile);
   }
 
+  const [visible, setVisible] = useState(false);
+  const [text, setText] = useState('');
+
+  const showPopup = () => setVisible(true);
+  const hidePopup = () => setVisible(false);
+
   return (
+    <PaperProvider>
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
         HARMONIZE
@@ -136,29 +143,38 @@ export default function Home() {
           ))}
         </View>
 
-      <Pressable onPress={toggleModal}>
-          <Image
-            source={require('../../assets/images/add-icon.png')}
-            style={styles.add_icon}
-          />
-      </Pressable>
-
-      <Modal
-        animationType = 'fade'
-        transparent = {true}
-        visible = {modalVisbile}
-        onRequestClose={toggleModal} // handles back button
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Create a playlist</Text>
-            <Button title="Close" onPress={toggleModal} />
-          </View>
-        </View>
-
-      </Modal>
+        <IconButton
+              icon="plus-circle-outline"
+              size={40}
+              onPress={showPopup}
+              style={styles.addIcon}
+              iconColor="white"
+            />
       
     </ThemedView>
+
+    <Portal>
+      <Modal 
+        visible={visible} 
+        onDismiss={hidePopup} 
+        contentContainerStyle={styles.modalContainer}
+      >
+        <View style={styles.innerContainer}>
+          <Text style={styles.modalText}>Playlist Name:</Text>
+          <TextInput
+            mode="outlined"
+            value={text}
+            onChangeText={setText}
+            style={styles.input} // Added styling for width
+          />
+          <Button mode="contained" onPress={hidePopup} style={styles.button}>
+            Create
+          </Button>
+        </View>
+      </Modal>
+    </Portal>
+
+  </PaperProvider>
   );
 }
 
@@ -210,13 +226,6 @@ const styles = StyleSheet.create({
     top: 515,
     right: 25,
   },
-  add_icon: {
-    position: 'absolute',
-    height: 40,
-    width: 40,
-    bottom: 100,
-    left: 140,
-  },
   listContainer:{
     width: '100%',
     flexWrap: 'wrap',
@@ -257,22 +266,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
   },
-  modalView: {
+  addIcon: {
+    right: 10,
+    bottom: 100,
+    position: 'absolute',
+    justifyContent: 'flex-start',
+   },
+  name:{
+    left: 20,
+    color: 'white',
+    width: '87%',
+    fontSize: 18,
+    fontWeight: "bold"
+   },
+   modalContainer: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    padding: 20,
+    width: 300, // Explicit width
+    alignSelf: 'center',
+    borderRadius: 10,
+  },
+  innerContainer: {
+    justifyContent: 'center',
+    color: 'grey',
   },
   modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
+    fontSize: 18,
+    marginBottom: 10,
+    color: 'grey',
+  },
+  input: {
+    width: '100%', // Ensures the input expands
+    marginBottom: 20,
+  },
+  button: {
+    alignSelf: 'center',
+    width: '80%', // Optional, to match input width
   },
 });

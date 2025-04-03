@@ -75,87 +75,102 @@ const AllPlaylists = () => {
   const hidePopup = () => setVisible(false);
 
   return (
-    <ThemedView style={styles.overall}>
-      <Text variant="displayMedium" style={styles.title}>
-        PLAYLISTS
-      </Text>
-      
     <PaperProvider>
-    <IconButton
-            icon="plus-circle-outline"
-            size={40}
-            onPress={showPopup}
-            style={styles.addIcon}
-            iconColor="grey"
-          />
-      <View>
-          <Portal>
-            <Modal visible={visible} onDismiss={hidePopup} contentContainerStyle={styles.popup}>
-              <Text>Playlist Name:</Text>
-              <TextInput
-                mode="outlined"
-                value={text}
-                onChangeText={text => setText(text)}
-              />
-              <Button mode="contained" onPress={hidePopup}>
-                Create
-              </Button>
-            </Modal>
-          </Portal>
-        </View>
-      </PaperProvider>
-
+      <ThemedView style={styles.overall}>
+        <Text variant="displayMedium" style={styles.title}>
+          PLAYLISTS
+        </Text>
         
 
-      <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder="Search Playlists"
-          value={searchQuery}
-          onChangeText={handleSearchQueryChange}
-          style={styles.searchbar}
-        />
-      </View>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <FlatList 
-          data={results} 
-          keyExtractor={(item: SpotifyItem) => item.id}
-          renderItem={({ item }: { item: SpotifyItem }) => (
-            <List.Item
-              // Navigate to the playlist page when pressed, passing the id
-              onPress={() => router.push(`/playlist?id=${item.id}`)}
-              // Use a custom title component to truncate long titles
-              title={() => (
-                <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-                  {item.name}
-                </Text>
-              )}
-              left={() =>
-                item.uri ? (
-                  <Image 
-                    source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} 
-                    style={styles.thumbnail} 
-                  />
-                ) : (
-                  <List.Icon icon="music" />
-                )
-              }
-              right={() => (
-                <View style={styles.rightContainer}>
-                  <Image
-                    source={require('../../assets/images/arrow.png')}
-                    style={styles.arrowIcon}
-                  />
-                </View>
-              )}
+        <View style = {styles.searchContainer}>
+                   <Searchbar
+                     placeholder="Search Playlists"
+                     placeholderTextColor="grey"
+                     value={searchQuery}
+                     onChangeText={handleSearchQueryChange}
+                     style={styles.searchbar}
+                   />
+              </View>
+
+        <IconButton
+              icon="plus-circle-outline"
+              size={40}
+              onPress={showPopup}
+              style={styles.addIcon}
+              iconColor="grey"
             />
-          )}
-        />
-      </GestureHandlerRootView>
-    </ThemedView>
+
+
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <FlatList 
+            data={results} 
+            keyExtractor={(item: SpotifyItem) => item.id}
+            renderItem={({ item }: { item: SpotifyItem }) => (
+              <List.Item
+                // Navigate to the playlist page when pressed, passing the id
+                onPress={() => router.push(`/playlist?id=${item.id}`)}
+                // Use a custom title component to truncate long titles
+                title={() => (
+                  <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+                    {item.name}
+                  </Text>
+                )}
+                left={() =>
+                  item.uri ? (
+                    <Image 
+                      source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} 
+                      style={styles.thumbnail} 
+                    />
+                  ) : (
+                    <List.Icon icon="music" />
+                  )
+                }
+                right={() => (
+                  <View style={styles.rightContainer}>
+                    <Image
+                      source={require('../../assets/images/arrow.png')}
+                      style={styles.arrowIcon}
+                    />
+                  </View>
+                )}
+              />
+            )}
+          />
+        </GestureHandlerRootView>
+      </ThemedView>
+
+    <Portal>
+      <Modal 
+        visible={visible} 
+        onDismiss={hidePopup} 
+        contentContainerStyle={styles.modalContainer}
+      >
+        <View style={styles.innerContainer}>
+          <Text style={styles.modalText}>Playlist Name:</Text>
+          <TextInput
+            mode="outlined"
+            value={text}
+            onChangeText={setText}
+            style={styles.input} // Added styling for width
+          />
+          <Button mode="contained" onPress={hidePopup} style={styles.button}>
+            Create
+          </Button>
+        </View>
+      </Modal>
+    </Portal>
+  </PaperProvider>
+
   );
 };
 
 export default AllPlaylists;
+
+const theme = {
+  colors: {
+    onSurfaceVariant: 'grey', // This controls the placeholder text color
+  },
+};
 
 const styles = StyleSheet.create({
  overall: {
@@ -178,12 +193,13 @@ const styles = StyleSheet.create({
    justifyContent: 'flex-start',
  },
  searchContainer:{
-   marginTop: 33,
-   width: '90%'
+   marginTop: 100,
+   width: '90%',
  },
  searchbar: {
    width: '100%',
-   marginBottom: 30,
+   marginBottom: 20,
+   backgroundColor: 'white',
  },
  rightContainer: {
   flexDirection: 'row',
@@ -202,8 +218,10 @@ const styles = StyleSheet.create({
   right:10
  },
  addIcon: {
-  left: 150,
-  top: 15
+  right: 10,
+  top: 75,
+  position: 'absolute',
+  justifyContent: 'flex-start',
  },
 name:{
   left: 20,
@@ -212,4 +230,28 @@ name:{
   fontSize: 18,
   fontWeight: "bold"
  },
+ modalContainer: {
+  backgroundColor: 'white',
+  padding: 20,
+  width: 300, // Explicit width
+  alignSelf: 'center',
+  borderRadius: 10,
+},
+innerContainer: {
+  justifyContent: 'center',
+  color: 'grey',
+},
+modalText: {
+  fontSize: 18,
+  marginBottom: 10,
+  color: 'grey',
+},
+input: {
+  width: '100%', // Ensures the input expands
+  marginBottom: 20,
+},
+button: {
+  alignSelf: 'center',
+  width: '80%', // Optional, to match input width
+},
 });
