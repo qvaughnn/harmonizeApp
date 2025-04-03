@@ -75,7 +75,6 @@ const AllPlaylists = () => {
   const hidePopup = () => setVisible(false);
 
   return (
-    <PaperProvider>
       <ThemedView style={styles.overall}>
         <Text variant="displayMedium" style={styles.title}>
           PLAYLISTS
@@ -137,30 +136,32 @@ const AllPlaylists = () => {
             )}
           />
         </GestureHandlerRootView>
-      </ThemedView>
 
-    <Portal>
-      <Modal 
+
+        <Modal 
         visible={visible} 
         onDismiss={hidePopup} 
         contentContainerStyle={styles.modalContainer}
       >
         <View style={styles.innerContainer}>
-          <Text style={styles.modalText}>Playlist Name:</Text>
-          <TextInput
-            mode="outlined"
-            value={text}
-            onChangeText={setText}
-            style={styles.input} // Added styling for width
-          />
-          <Button mode="contained" onPress={hidePopup} style={styles.button}>
-            Create
-          </Button>
+          <ThemedView style={styles.modalContent}>
+            <Text style={styles.modalText}>Playlist Name:</Text>
+            <TextInput
+              mode="outlined"
+              value={text}
+              onChangeText={setText}
+              style={styles.input} // Added styling for width
+            />
+            <Button mode="contained" onPress={hidePopup} style={styles.button}>
+              Create
+            </Button>
+          </ThemedView>
         </View>
       </Modal>
-    </Portal>
-  </PaperProvider>
 
+      </ThemedView>
+
+    
   );
 };
 
@@ -184,6 +185,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
  },
+ modalContent: {
+  width: '100%',
+  height: '80%',
+  backgroundColor: 'white',
+  padding: 20,
+  borderRadius: 10,
+  alignItems: 'center',
+  // borderWidth: 2,  // Adds a border
+  // borderColor: 'black',  // Sets the border color
+},
  title:{
    fontWeight: 'bold',
    color: 'darkgrey',
