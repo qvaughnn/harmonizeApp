@@ -105,7 +105,7 @@ const AllPlaylists = () => {
       </View>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <FlatList 
-          data={results} 
+          data={filteredResults} 
           keyExtractor={(item: SpotifyItem) => item.id}
           renderItem={({ item }: { item: SpotifyItem }) => (
             <List.Item
