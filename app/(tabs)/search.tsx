@@ -25,6 +25,8 @@ export default function TabTwoScreen() {
  const {token} = useAuth();
  const [modalVisible, setModalVisible] = React.useState(false);
  const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
+ const [newPlaylistModalVisible, setNewPlaylistModalVisible] = React.useState(false);
+ const [playlistName, setPlaylistName] = React.useState('');
 
 
  async function handleSearchQueryChange(query: string){
@@ -103,10 +105,22 @@ export default function TabTwoScreen() {
     setSelectedSong(null);
   };
 
+  const openNewPlaylistModal = () => {
+    setModalVisible(false);
+    setNewPlaylistModalVisible(true);
+  };
 
+  const closeNewPlaylistModal = () => {
+    setNewPlaylistModalVisible(false);
+    setPlaylistName(''); // Reset the input field
+  };
 
-  function addNewPlaylist() {
-  }
+  const addNewPlaylist = () => {
+    console.log("Creating new playlist with name: ", playlistName);
+    // You can handle the logic to create the playlist here
+    closeNewPlaylistModal(); // Close the modal after creating the playlist
+  };
+
 
  return (
    <ThemedView style={styles.overall}>
@@ -174,6 +188,7 @@ export default function TabTwoScreen() {
       )}/>
     </GestureHandlerRootView>
 
+    {/* First Modal: shows the option to add song to a new or existing playlist  */}
     <Modal
       visible={modalVisible}
       animationType="slide"
@@ -183,14 +198,31 @@ export default function TabTwoScreen() {
       <View style={styles.modalOverlay}>
         <ThemedView style={styles.modalContent}>
           <Text variant="headlineMedium" style={styles.addTitle}>Add to Playlist</Text>
-          <Button onPress={addNewPlaylist} style= {styles.newPlaylistButton} labelStyle={{color: 'black'}}>New Playlist</Button>
-          <Button onPress={closeModal}>Close</Button>
+          <Button onPress={openNewPlaylistModal} style= {styles.newPlaylistButton} labelStyle={{color: 'black'}}>New Playlist</Button>
+          <Button onPress={closeModal} labelStyle={{ color:'white'}}>Cancel</Button>
         </ThemedView>
       </View>
     </Modal>
-
-
-    
+  {/* Second Modal: shows the option to create a new playlist */} 
+  <Modal
+    visible={newPlaylistModalVisible}
+    animationType="slide"
+    transparent={true}
+    onRequestClose={closeNewPlaylistModal}>
+    <View style={styles.modalOverlay}>
+      <ThemedView style={styles.modalContent}>
+        <Text variant="headlineMedium" style={styles.addTitle}>Playlist Name</Text>
+        <TextInput
+              label="Enter Playlist Name"
+              value={playlistName}
+              onChangeText={setPlaylistName}
+              style={styles.playlistInput}
+        />
+        <Button onPress={addNewPlaylist} style={styles.newPlaylistButton} labelStyle={{ color: 'black' }}>Create</Button>
+        <Button onPress={closeNewPlaylistModal} labelStyle={{ color:'white'}}>Cancel</Button>
+      </ThemedView>
+    </View>
+  </Modal>  
    </ThemedView>
  );
 }
@@ -260,12 +292,14 @@ const styles = StyleSheet.create({
   alignItems: 'center',
 },
 modalContent: {
-  width: '90%',
+  width: '100%',
   height: '80%',
   backgroundColor: 'white',
   padding: 20,
   borderRadius: 10,
   alignItems: 'center',
+  // borderWidth: 2,  // Adds a border
+  // borderColor: 'black',  // Sets the border color
 },
 addTitle: {
   color: 'white',
@@ -279,5 +313,10 @@ newPlaylistButton: {
   paddingVertical: 10,
   borderRadius: 30,
   height: 60,
+  
+},
+playlistInput: {
+  width: '80%',
+  marginBottom: 20,
 },
 });
