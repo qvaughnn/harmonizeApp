@@ -47,10 +47,15 @@ async function checkUsernameUniqueness(username: string): Promise<boolean> {
 // Gets the user code of a given spotify id and null of the user code doesn't exist
 async function getSpotifyUserCode(id: string): Promise<string | null> {
   const usersRef = ref(database, 'users');
+  let snapshot = null;
 
-  const snapshot = await get(usersRef);
+  try {
+    snapshot = await get(usersRef);
+  } catch (error: any) {
+    console.error("Error getting users", error.message)
+  }
 
-  if (snapshot.exists()) {
+  if (snapshot != null && snapshot.exists()) {
     for (const username in snapshot.val()) {
       const userProfileRef = child(usersRef, `${username}/Spotify/userProfile/id`);
       const userProfileSnapshot = await get(userProfileRef);
