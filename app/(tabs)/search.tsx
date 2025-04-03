@@ -1,6 +1,6 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity, Modal } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button, Searchbar, List } from 'react-native-paper';
+import { Text , TextInput, Button, Searchbar, List, IconButton } from 'react-native-paper';
 import * as React from 'react';
 import { FlatList } from 'react-native-gesture-handler';
 import { getAuth, signInAnonymously } from "firebase/auth";
@@ -23,6 +23,8 @@ export default function TabTwoScreen() {
  const [results, setResults] = React.useState<SpotifyItem[]>([]);
  const [loading, setLoading] = React.useState(false);
  const {token} = useAuth();
+ const [modalVisible, setModalVisible] = React.useState(false);
+ const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
 
 
  async function handleSearchQueryChange(query: string){
@@ -89,6 +91,19 @@ export default function TabTwoScreen() {
     //add to playlist API call
   }
 
+  // handles adding a song to a playlist
+  const handleAddSong = (item: SpotifyItem) => {
+    setSelectedSong(item);
+    console.log("Adding song: ", item.name);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedSong(null);
+  };
+
+
 
  return (
    <ThemedView style={styles.overall}>
@@ -143,23 +158,35 @@ export default function TabTwoScreen() {
           }
           right={() =>
             <View style={styles.rightContainer}>
-            <Image
-              source={require('../../assets/images/add-icon.png')}
-              style={styles.add_icon}
-            />
+            <IconButton
+               icon="plus-circle-outline"
+               size={30}
+               onPress={() => handleAddSong(item)}
+               style={styles.add_icon}
+               iconColor="black"
+             />
             </View>
           }
         />
       )}/>
     </GestureHandlerRootView>
 
+    <Modal
+      visible={modalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={closeModal}
+    >
+      <View style={styles.modalOverlay}>
+        <ThemedView style={styles.modalContent}>
+          <Text variant="headlineMedium" style={styles.addTitle}>Add to Playlist</Text>
+          <Button onPress={closeModal}>Close</Button>
+        </ThemedView>
+      </View>
+    </Modal>
 
-         
-   {/* <View style={styles.subtitleContainer}>
-     <Text variant="displayMedium" style={styles.subtitle}>
-         Recent Searches
-       </Text>
-   </View> */}
+
+    
    </ThemedView>
  );
 }
@@ -223,4 +250,22 @@ const styles = StyleSheet.create({
   height: 24,
   right: -24
  },
+ modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContent: {
+  width: '90%',
+  height: '80%',
+  backgroundColor: 'white',
+  padding: 20,
+  borderRadius: 10,
+  alignItems: 'center',
+},
+addTitle: {
+  fontWeight: 'bold',
+  color: 'darkgrey',
+  fontSize: 24,
+},
 });
