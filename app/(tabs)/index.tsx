@@ -1,16 +1,17 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button } from 'react-native-paper';
+import { Text, TextInput, Button } from 'react-native-paper';
 import * as AuthSession from 'expo-auth-session';
 import { useEffect, useState } from 'react';
 import { getAuth, signInAnonymously } from "firebase/auth";
-import { ref, set } from "firebase/database";
+import { ref, set, onValue, get, child } from "firebase/database";
+import { DataSnapshot } from 'firebase/database';
 import { useAuth } from "../../contexts/AuthContext";
 import { app, database } from "../config/firebase";
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
-const REDIRECT_URI = 'exp://10.140.46.209:8081';
+const REDIRECT_URI = 'exp://10.141.174.39:8081';
 const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
 
 
@@ -18,6 +19,55 @@ const discovery = {
   authorizationEndpoint: 'https://accounts.spotify.com/authorize',
   tokenEndpoint: 'https://accounts.spotify.com/api/token',
 };
+
+// Generate random 6 character user code
+function generateUsername(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  console.log("Generated string:", result)
+  return result;
+}
+
+// Returns true if username exists, false otherwise
+async function checkUsernameUniqueness(username: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const dbRef = ref(database, `/users/${username}`); // Direct ref is efficient here
+
+    onValue(dbRef, (snapshot) => {
+      resolve(snapshot.exists()); // true if username exists, false otherwise
+    }, (error) => {
+      reject(error); // Handle errors appropriately
+    });
+  });
+}
+
+// Gets the user code of a given spotify id and null of the user code doesn't exist
+async function getSpotifyUserCode(id: string): Promise<string | null> {
+  const usersRef = ref(database, 'users');
+  let snapshot = null;
+
+  try {
+    snapshot = await get(usersRef);
+  } catch (error: any) {
+    console.error("Error getting users", error.message)
+  }
+
+  if (snapshot != null && snapshot.exists()) {
+    for (const username in snapshot.val()) {
+      const userProfileRef = child(usersRef, `${username}/Spotify/userProfile/id`);
+      const userProfileSnapshot = await get(userProfileRef);
+
+      if (userProfileSnapshot.exists() && userProfileSnapshot.val() === id) {
+        return username;
+      }
+    }
+  }
+
+  return null;
+}
 
 export default function HomeScreen() {
   const [token, setLocalToken] = useState<string | null>(null);
@@ -94,22 +144,44 @@ export default function HomeScreen() {
       // Authenticate user with Firebase (anonymous sign-in)
       let firebaseUser = auth.currentUser;
       if (!firebaseUser) {
-          const userCredential = await signInAnonymously(auth);
-          firebaseUser = userCredential.user;
-          console.log("Signed in Firebase user:", firebaseUser.uid);
+        const userCredential = await signInAnonymously(auth);
+        firebaseUser = userCredential.user;
+        console.log("Signed in Firebase user:", firebaseUser.uid);
       }
 
-      
+      // check if Spotify user exists
+      let userCode = null
+      try {
+        userCode = await getSpotifyUserCode(userProfile.id)
+      } catch (error: unknown) {
+        // ERROR HERE
+        console.log("id:", userProfile.id);
+
+        if (error instanceof Error) {
+          console.error("Error getting Spotify ID:", error.message);
+        } else {
+          console.error("An unknown error occurred:", error);
+        }
+      }
+      // If user doesn't exist, generate their code
+      if (userCode == null) {
+        let unique = false;
+        while (!unique) {
+          userCode = generateUsername();
+          unique = !(await checkUsernameUniqueness(userCode))
+        }
+        console.log("User created:", userCode)
+      }
 
       // Save token and user profile in Firebase Realtime Database
-      const userRef = ref(database, `users/${spotifyUserId}`);
+      const userRef = ref(database, `users/${userCode}/Spotify`)
       await set(userRef, {
-        firebaseUID: firebaseUser.uid, // Store Firebase user ID
-        spotifyAccessToken: accessToken,
-        spotifyRefreshToken: refreshToken,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
         expiresAt: Date.now() + tokenData.expires_in * 1000,
-        userProfile, // store the full profile
+        userProfile,
       });
+      console.log("User logged in:", userCode)
       console.log("User data stored in Firebase:", userProfile);
     } catch (error) {
       console.error("Token exchange error:", error);
@@ -119,51 +191,51 @@ export default function HomeScreen() {
 
   const fetchUserProfile = async () => {
     try {
-        if (!token) {
-            console.error("No access token available.");
-            return;
-        }
+      if (!token) {
+        console.error("No access token available.");
+        return;
+      }
 
-        const response = await fetch("https://api.spotify.com/v1/me", {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${token}`, // Use Bearer token for authentication
-                "Content-Type": "application/json",
-            },
-        });
+      const response = await fetch("https://api.spotify.com/v1/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`, // Use Bearer token for authentication
+          "Content-Type": "application/json",
+        },
+      });
 
-        const userData = await response.json();
+      const userData = await response.json();
 
-        if (response.ok) {
-            console.log("Spotify User Profile:", userData);
-        } else {
-            console.error("Error fetching profile:", userData);
-        }
+      if (response.ok) {
+        console.log("Spotify User Profile:", userData);
+      } else {
+        console.error("Error fetching profile:", userData);
+      }
     } catch (error) {
-        console.error("User profile fetch error:", error);
+      console.error("User profile fetch error:", error);
     }
-};
+  };
 
   return (
     <ThemedView style={styles.overall}>
       <Image
-          source={require('@/assets/images/logoTest.png')}
-          style={styles.reactLogo}
+        source={require('@/assets/images/logoTest.png')}
+        style={styles.reactLogo}
       />
-      <Button 
-        icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>} 
-        style={styles.spotifyButton} 
+      <Button
+        icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>}
+        style={styles.spotifyButton}
         mode="elevated"
-        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}
+        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize: 20, }}
         onPress={() => promptAsync()}>
-          LOG IN WITH SPOTIFY
+        LOG IN WITH SPOTIFY
       </Button>
-      <Button 
-        icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>} 
-        style={styles.appleButton} 
+      <Button
+        icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>}
+        style={styles.appleButton}
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:17, }}>
-          LOG IN WITH APPLE MUSIC
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}>
+        LOG IN WITH APPLE MUSIC
       </Button>
     </ThemedView>
   );
@@ -172,7 +244,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   overall: {
     alignItems: 'center',
-    flex:1,
+    flex: 1,
     justifyContent: 'center',
   },
   reactLogo: {
@@ -208,12 +280,12 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   spotifyLogo: {
-    height:40,
-    width:40
+    height: 40,
+    width: 40
   },
-  appleLogo:{
-    height:30,
-    width:30,
+  appleLogo: {
+    height: 30,
+    width: 30,
     resizeMode: 'contain'
   }
 });
