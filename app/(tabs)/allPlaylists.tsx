@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   height: 24,
   right:10
  },
-name:{
+ name:{
   left: 20,
   color: 'white',
   width: '87%',
@@ -229,28 +229,43 @@ name:{
   position: 'absolute',
   justifyContent: 'flex-start',
  },
+ popup: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+ },
+ modalContent: {
+  width: '100%',
+  height: '80%',
+  backgroundColor: 'white',
+  padding: 20,
+  borderRadius: 10,
+  alignItems: 'center',
+  // borderWidth: 2,  // Adds a border
+  // borderColor: 'black',  // Sets the border color
+ },
  modalContainer: {
   backgroundColor: 'white',
   padding: 20,
   width: 300, // Explicit width
   alignSelf: 'center',
   borderRadius: 10,
-},
-innerContainer: {
+ },
+ innerContainer: {
   justifyContent: 'center',
   color: 'grey',
-},
+ },
 modalText: {
   fontSize: 18,
   marginBottom: 10,
   color: 'grey',
-},
-input: {
+ },
+ input: {
   width: '100%', // Ensures the input expands
   marginBottom: 20,
-},
-button: {
+ },
+ button: {
   alignSelf: 'center',
   width: '80%', // Optional, to match input width
-},
+ },
 });
