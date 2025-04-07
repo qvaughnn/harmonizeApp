@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text, Searchbar, List, Button } from 'react-native-paper';
+import { Text, Searchbar, List, Button, IconButton } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
@@ -91,11 +91,13 @@ const AllPlaylists = () => {
       <Text variant="displayMedium" style={styles.title}>
         PLAYLISTS
       </Text>
-      <Button>
-        icon = "plus"
-        mode = "contained"
-        top: 80
-      </Button>
+      <IconButton
+              icon="plus-circle-outline"
+              size={40}
+              onPress={showPopup}
+              style={styles.addIcon}
+              iconColor="grey"
+            />
 
       <View style={styles.searchContainer}>
         <Searchbar
