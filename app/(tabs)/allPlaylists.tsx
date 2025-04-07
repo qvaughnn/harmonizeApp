@@ -223,4 +223,34 @@ name:{
   fontSize: 18,
   fontWeight: "bold"
  },
+ addIcon: {
+  right: 10,
+  top: 75,
+  position: 'absolute',
+  justifyContent: 'flex-start',
+ },
+ modalContainer: {
+  backgroundColor: 'white',
+  padding: 20,
+  width: 300, // Explicit width
+  alignSelf: 'center',
+  borderRadius: 10,
+},
+innerContainer: {
+  justifyContent: 'center',
+  color: 'grey',
+},
+modalText: {
+  fontSize: 18,
+  marginBottom: 10,
+  color: 'grey',
+},
+input: {
+  width: '100%', // Ensures the input expands
+  marginBottom: 20,
+},
+button: {
+  alignSelf: 'center',
+  width: '80%', // Optional, to match input width
+},
 });
