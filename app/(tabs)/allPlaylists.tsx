@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text, Searchbar, List, Button, IconButton } from 'react-native-paper';
+import { Text, Searchbar, List, Button, IconButton, Modal, TextInput } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
@@ -86,6 +86,12 @@ const AllPlaylists = () => {
 
   };
 
+  const [visible, setVisible] = useState(false);
+  const [text, setText] = useState('');
+
+  const showPopup = () => setVisible(true);
+  const hidePopup = () => setVisible(false);
+
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
@@ -143,6 +149,28 @@ const AllPlaylists = () => {
           )}
         />
       </GestureHandlerRootView>
+
+        <Modal 
+        visible={visible} 
+        onDismiss={hidePopup} 
+        contentContainerStyle={styles.modalContainer}
+      >
+        <View style={styles.innerContainer}>
+          <ThemedView style={styles.modalContent}>
+            <Text style={styles.modalText}>Playlist Name:</Text>
+            <TextInput
+              mode="outlined"
+              value={text}
+              onChangeText={setText}
+              style={styles.input} // Added styling for width
+            />
+            <Button mode="contained" onPress={hidePopup} style={styles.button}>
+              Create
+            </Button>
+          </ThemedView>
+        </View>
+      </Modal>
+
     </ThemedView>
   );
 };
