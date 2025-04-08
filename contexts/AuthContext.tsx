@@ -9,6 +9,7 @@ interface AuthContextProps {
   setToken: (token: string | null) => void;
   spotifyUserId: string | null;
   setSpotifyUserId: (id: string | null) => void;
+  // isLoggedIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -16,13 +17,16 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [spotifyUserId, setSpotifyUserId] = useState<string | null>(null);
+  // const isLoggedIn = !!spotifyUserId;
 
   // On app load, fetch stored token for the current user if needed.
   useEffect(() => {
     const fetchStoredToken = async () => {
       if (!spotifyUserId) return;
+
       const userRef = ref(database, `users/${spotifyUserId}`);
       const snapshot = await get(userRef);
+
       if (snapshot.exists()) {
         const userData = snapshot.val();
         if (Date.now() >= userData.expiresAt) {
@@ -38,7 +42,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [spotifyUserId]);
 
   return (
-    <AuthContext.Provider value={{ token, setToken, spotifyUserId, setSpotifyUserId }}>
+    <AuthContext.Provider 
+      value={{ 
+        token, 
+        setToken, 
+        spotifyUserId, 
+        setSpotifyUserId,
+        // isLoggedIn, 
+        }}
+      >
       {children}
     </AuthContext.Provider>
   );

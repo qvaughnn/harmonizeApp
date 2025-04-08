@@ -6,14 +6,14 @@ import { useEffect, useState } from 'react';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { ref, set, onValue, get, child } from "firebase/database";
 import { DataSnapshot } from 'firebase/database';
-import { useAuth } from "../../contexts/AuthContext";
-import { app, database } from "../config/firebase";
+import { useAuth } from "../contexts/AuthContext";
+import { app, database } from "./config/firebase";
+import { useRouter } from 'expo-router';
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 const REDIRECT_URI = 'exp://10.141.174.39:8081';
 const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
-
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.spotify.com/authorize',
@@ -72,6 +72,7 @@ async function getSpotifyUserCode(id: string): Promise<string | null> {
 export default function HomeScreen() {
   const [token, setLocalToken] = useState<string | null>(null);
   const { setToken, setSpotifyUserId } = useAuth();
+  const router = useRouter();
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -173,6 +174,8 @@ export default function HomeScreen() {
         console.log("User created:", userCode)
       }
 
+      setSpotifyUserId(spotifyUserId);
+
       // Save token and user profile in Firebase Realtime Database
       const userRef = ref(database, `users/${userCode}/Spotify`)
       await set(userRef, {
@@ -186,6 +189,8 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Token exchange error:", error);
     }
+    router.replace('/(tabs)/home');
+
   };
 
 
