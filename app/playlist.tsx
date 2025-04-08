@@ -115,6 +115,10 @@ export default function PlaylistScreen() {
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
+  const [visible, setVisible] = useState(false);
+
+  const showPopup = () => setVisible(true);
+
   useEffect(() => {
     if (playlistId && token) {
       fetchPlaylistData(playlistId as string);
@@ -217,6 +221,14 @@ export default function PlaylistScreen() {
         keyExtractor={(item, index) => item.track?.id || String(index)}
         contentContainerStyle={styles.trackList}
       />
+
+      <IconButton
+                    icon="pencil-circle"
+                    size={40}
+                    onPress={showPopup}
+                    style={styles.addIcon}
+                    iconColor="black"
+                  />
     </ThemedView>
   );
 }
@@ -298,4 +310,10 @@ const styles = StyleSheet.create({
     color: 'grey',
     fontSize: 14,
   },
+  addIcon: {
+    right: 10,
+    bottom: 75,
+    position: 'absolute',
+    justifyContent: 'flex-start',
+   },
 });
