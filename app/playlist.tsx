@@ -40,8 +40,8 @@ async function createPlaylist(name: string, author: string, image: string): Prom
 }
 
 // adds song to given playlist, only takes spotify id for now
-async function addSong(playlistRef: DatabaseReference, spotifyId: string) {
-  const songsRef = child(playlistRef, "songs/spotify");
+async function addSong(playlistRef: string, spotifyId: string) {
+  const songsRef = ref(database, `playlists/${playlistRef}/songs/spotify`)
 
   // generates unique id for song
   const newSongRef = push(songsRef);
