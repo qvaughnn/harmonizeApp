@@ -19,7 +19,7 @@ function RootNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       {!isLoggedIn ? (
-        <Stack.Screen name="login" />
+        <Stack.Screen name="index" />
       ) : (
         <Stack.Screen name="(tabs)" />
       )}
@@ -27,6 +27,7 @@ function RootNav() {
       <Stack.Screen name="profile" />
       <Stack.Screen name="friendProfile" />
       <Stack.Screen name="playlist" />
+      <Stack.Screen name="playlistImport" />
     </Stack>
   );
 }

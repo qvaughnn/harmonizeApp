@@ -189,7 +189,8 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Token exchange error:", error);
     }
-    router.replace('/(tabs)/home');
+
+    router.replace('/playlistImport'); 
 
   };
 
