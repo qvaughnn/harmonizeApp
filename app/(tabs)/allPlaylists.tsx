@@ -6,7 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
-import { set } from 'firebase/database';
+import { app, database } from "../config/firebase";
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
 
 type SpotifyItem = {
   id: string;
@@ -36,6 +37,32 @@ const AllPlaylists = () => {
       );
     }
   }
+
+  // creates a new playlist with the given name, author, and image and returns the key of the new playlist
+async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
+  const playlistsRef = ref(database, "playlists");
+
+  // generates unique id for playlist
+  const newPlaylistRef = push(playlistsRef);
+
+  const playlistData = {
+    name: name,
+    author: author,
+    image: image,
+    // can add more fields later
+  }
+
+  // Set the playlist data at the new location
+  set(newPlaylistRef, playlistData)
+    .then(() => {
+      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding playlist: ", error);
+    });
+
+  return newPlaylistRef.key;
+}
 
   useEffect(() => {
     if (token) {
@@ -83,6 +110,8 @@ const AllPlaylists = () => {
   };
 
   const addPlaylist = () => {
+    setVisible(false);
+    createPlaylist(text, "playlistID", "../assets/images/coverSample.png");
 
   };
 
@@ -91,6 +120,7 @@ const AllPlaylists = () => {
 
   const showPopup = () => setVisible(true);
   const hidePopup = () => setVisible(false);
+
 
   return (
     <ThemedView style={styles.overall}>
@@ -164,7 +194,7 @@ const AllPlaylists = () => {
               onChangeText={setText}
               style={styles.input} // Added styling for width
             />
-            <Button mode="contained" onPress={hidePopup} style={styles.button}>
+            <Button mode="contained" onPress={addPlaylist} style={styles.button}>
               Create
             </Button>
           </ThemedView>
@@ -236,8 +266,8 @@ const styles = StyleSheet.create({
  },
  modalContent: {
   width: '100%',
-  height: '80%',
-  backgroundColor: 'white',
+  height: '70%',
+  backgroundColor: 'transparent',
   padding: 20,
   borderRadius: 10,
   alignItems: 'center',
@@ -245,20 +275,22 @@ const styles = StyleSheet.create({
   // borderColor: 'black',  // Sets the border color
  },
  modalContainer: {
-  backgroundColor: 'white',
-  padding: 20,
+  backgroundColor: 'transparent',
+  padding: 10,
   width: 300, // Explicit width
+  height: 300,
   alignSelf: 'center',
   borderRadius: 10,
  },
  innerContainer: {
   justifyContent: 'center',
   color: 'grey',
+  height: 270,
  },
 modalText: {
   fontSize: 18,
   marginBottom: 10,
-  color: 'grey',
+  color: 'white',
  },
  input: {
   width: '100%', // Ensures the input expands
