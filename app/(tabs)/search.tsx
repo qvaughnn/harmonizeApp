@@ -208,8 +208,8 @@ export default function TabTwoScreen() {
     visible={newPlaylistModalVisible}
     transparent={true}
     onRequestClose={closeNewPlaylistModal}>
-    <View style={styles.modalOverlay}>
-      <ThemedView style={styles.modalContent}>
+    <View style={styles.innerContainer}>
+      <ThemedView style={styles.playlistModalContent}>
         <Text variant="headlineMedium" style={styles.addTitle}>Playlist Name</Text>
         <TextInput
               label="Enter Playlist Name"
@@ -293,14 +293,37 @@ const styles = StyleSheet.create({
 },
 modalContent: {
   width: '100%',
-  height: '80%',
-  backgroundColor: 'white',
+  height:'90%',
+  backgroundColor: 'transparent',
   padding: 20,
   borderRadius: 10,
   alignItems: 'center',
   // borderWidth: 2,  // Adds a border
   // borderColor: 'black',  // Sets the border color
+ },
+ playlistModalContent: {
+  backgroundColor: 'black',
+  padding: 20,
+  borderRadius: 10,
+  alignItems: 'center',
+  width: '80%',
+  maxWidth: 400,
 },
+ modalContainer: {
+  backgroundColor: 'transparent',
+  padding: 10,
+  width: 300, // Explicit width
+  height: 300,
+  alignSelf: 'center',
+  borderRadius: 10,
+ },
+ innerContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  color: 'grey',
+  alignItems: 'center',
+
+ },
 addTitle: {
   color: 'white',
   fontSize: 20,
