@@ -206,7 +206,6 @@ export default function TabTwoScreen() {
   {/* Second Modal: shows the option to create a new playlist */} 
   <Modal
     visible={newPlaylistModalVisible}
-    animationType="slide"
     transparent={true}
     onRequestClose={closeNewPlaylistModal}>
     <View style={styles.modalOverlay}>
@@ -214,6 +213,7 @@ export default function TabTwoScreen() {
         <Text variant="headlineMedium" style={styles.addTitle}>Playlist Name</Text>
         <TextInput
               label="Enter Playlist Name"
+              mode="outlined"
               value={playlistName}
               onChangeText={setPlaylistName}
               style={styles.playlistInput}
