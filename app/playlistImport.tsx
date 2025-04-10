@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View, Pressable} from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text, Searchbar, List, Button, IconButton, Modal, TextInput, Checkbox} from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
@@ -123,46 +123,42 @@ const AllPlaylists = () => {
           keyExtractor={(item: SpotifyItem) => item.id}
           renderItem={({ item }: { item: SpotifyItem }) => {
             const isSelected = checkedPlaylists.includes(item.id);
-            return(
-
-            
-            <List.Item
-              // Navigate to the playlist page when pressed, passing the id
-              onPress={() => router.push(`/playlist?id=${item.id}`)}
-              // Use a custom title component to truncate long titles
-              title={() => (
-                <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-                  {item.name}
-                </Text>
-              )}
-              left={() =>
-                item.uri ? (
-                  <Image 
-                    source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} 
-                    style={styles.thumbnail} 
-                  />
-                ) : (
-                  <List.Icon icon="music" />
-                )
-              }
-              right={() => (
-                <View style={styles.rightContainer}>
-                  <Checkbox
-              status={isSelected ? 'checked' : 'unchecked'}
-              onPress={() => togglePlaylist(item.id)}
-            />
-                </View>
-              )}
-            />
-  )}}
+            return(            
+                <List.Item
+                    onPress={() => router.push(`/playlist?id=${item.id}`)}
+                    title={() => (
+                        <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+                        {item.name}
+                        </Text>
+                    )}
+                    style={isSelected && styles.selectedItem}
+                    left={() =>
+                        item.uri ? (
+                        <Image 
+                            source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)}
+                            style={styles.thumbnail} 
+                        />
+                        ) : (
+                        <List.Icon icon="music" />
+                        )
+                    }
+                    right={() => (
+                        <Pressable onPress={() => togglePlaylist(item.id)}>
+                            <View style={[styles.customCheckbox, isSelected && styles.customCheckboxChecked]}>
+                                {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                            </View>
+                        </Pressable>
+                    )}
+                />
+            )}}
         />
       </GestureHandlerRootView>
 
         <Modal 
-        visible={visible} 
-        onDismiss={hidePopup} 
-        contentContainerStyle={styles.modalContainer}
-      >
+            visible={visible} 
+            onDismiss={hidePopup} 
+            contentContainerStyle={styles.modalContainer}
+        >
         <View style={styles.innerContainer}>
           <ThemedView style={styles.modalContent}>
             <Text style={styles.modalText}>Playlist Name:</Text>
@@ -170,7 +166,7 @@ const AllPlaylists = () => {
               mode="outlined"
               value={text}
               onChangeText={setText}
-              style={styles.input} // Added styling for width
+              style={styles.input}
             />
             <Button mode="contained" onPress={hidePopup} style={styles.button}>
               Create
@@ -179,16 +175,17 @@ const AllPlaylists = () => {
         </View>
       </Modal>
       {checkedPlaylists.length > 0 && (
-  <View style={styles.bottomButtonContainer}>
-    <Button 
-      mode="contained" 
-      onPress={() => router.replace('/(tabs)/home')}
-      style={styles.continueButton}
-    >
-      Continue
-    </Button>
-  </View>
-)}
+    <View style={styles.bottomButtonContainer}>
+        <Button 
+            mode="contained" 
+            onPress={() => router.replace('/(tabs)/home')}
+            style={styles.continueButton}
+            labelStyle={styles.continueButtonText}
+        >
+        CONTINUE
+        </Button>
+    </View>
+    )}
     </ThemedView>
   );
 };
@@ -222,6 +219,8 @@ const styles = StyleSheet.create({
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'center',
+  paddingRight: 16,
+  height: '100%',
  },
  thumbnail: {
   width: 80,
@@ -248,8 +247,6 @@ const styles = StyleSheet.create({
   padding: 20,
   borderRadius: 10,
   alignItems: 'center',
-  // borderWidth: 2,  // Adds a border
-  // borderColor: 'black',  // Sets the border color
  },
  modalContainer: {
   backgroundColor: 'white',
@@ -268,35 +265,58 @@ modalText: {
   color: 'grey',
  },
  input: {
-  width: '100%', // Ensures the input expands
+  width: '100%',
   marginBottom: 20,
  },
- button: {
-  alignSelf: 'center',
-  width: '80%', // Optional, to match input width
- },
- playlistItem: {
+button: {
+    alignSelf: 'center',
+    width: '80%',
+},
+playlistItem: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-  },
+},
   
-  selectedPlaylistItem: {
-    backgroundColor: '#E8F5E9', // light green background
-  },
-  
-  bottomButtonContainer: {
+bottomButtonContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-  },
-  
-  continueButton: {
+},
+
+continueButton: {
     borderRadius: 24,
     paddingVertical: 10,
-  }
+},
+
+customCheckbox: {
+    width: 40,
+    height: 40,
+    borderWidth: 2,
+    borderColor: '#4A235A',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    top:20,
+    backgroundColor: '#D2B4DE',
+  },
+  
+  customCheckboxChecked: {
+    borderColor: '#4A235A',
+  },
+  
+  checkmark: {
+    fontSize: 16,
+    color: '#4A235A',
+    fontWeight: 'bold',
+  },
+
+  continueButtonText:{
+    fontSize:20,
+    fontWeight: 'bold',
+  },
+  selectedItem: {
+    backgroundColor: '#4A235A',
+  },  
 });
