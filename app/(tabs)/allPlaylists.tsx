@@ -121,6 +121,20 @@ async function createPlaylist(name: string, author: string, image: string): Prom
   const showPopup = () => setVisible(true);
   const hidePopup = () => setVisible(false);
 
+   const [playlistName, setPlaylistName] = React.useState('');
+
+  const closeNewPlaylistModal = () => {
+    setVisible(false);
+    setPlaylistName(''); // Reset the input field
+  };
+
+  const addNewPlaylist = () => {
+    console.log("Creating new playlist with name: ", playlistName);
+    // You can handle the logic to create the playlist here
+    createPlaylist(playlistName, "authorID", "imageURL");
+    closeNewPlaylistModal(); // Close the modal after creating the playlist
+  };
+
 
   return (
     <ThemedView style={styles.overall}>
@@ -169,9 +183,11 @@ async function createPlaylist(name: string, author: string, image: string): Prom
               }
               right={() => (
                 <View style={styles.rightContainer}>
-                  <Image
-                    source={require('../../assets/images/arrow.png')}
-                    style={styles.arrowIcon}
+                  <IconButton
+                  icon="arrow-right-circle-outline"
+                  size={25}
+                  style={styles.arrowIcon}
+                  iconColor='white'
                   />
                 </View>
               )}
@@ -187,16 +203,16 @@ async function createPlaylist(name: string, author: string, image: string): Prom
       >
         <View style={styles.innerContainer}>
           <ThemedView style={styles.modalContent}>
-            <Text style={styles.modalText}>Playlist Name:</Text>
-            <TextInput
+            <Text variant="headlineMedium" style={styles.addTitle}>Playlist Name</Text>
+        <TextInput
+              label="Enter Playlist Name"
               mode="outlined"
-              value={text}
-              onChangeText={setText}
-              style={styles.input} // Added styling for width
-            />
-            <Button mode="contained" onPress={addPlaylist} style={styles.button}>
-              Create
-            </Button>
+              value={playlistName}
+              onChangeText={setPlaylistName}
+              style={styles.playlistInput}
+        />
+        <Button onPress={addNewPlaylist} style={styles.newPlaylistButton} labelStyle={{ color: 'black' }}>Create</Button>
+        <Button onPress={closeNewPlaylistModal} labelStyle={{ color:'white'}}>Cancel</Button>
           </ThemedView>
         </View>
       </Modal>
@@ -266,7 +282,7 @@ const styles = StyleSheet.create({
  },
  modalContent: {
   width: '100%',
-  height: '70%',
+  height: '100%',
   backgroundColor: 'transparent',
   padding: 20,
   borderRadius: 10,
@@ -300,4 +316,29 @@ modalText: {
   alignSelf: 'center',
   width: '80%', // Optional, to match input width
  },
+ newPlaylistButton: {
+  backgroundColor: 'white',
+  marginBottom: 10,
+  width: '50%',
+  paddingVertical: 10,
+  borderRadius: 30,
+  height: 60,
+},
+playlistInput: {
+  width: '80%',
+  marginBottom: 20,
+},
+addTitle: {
+  color: 'white',
+  fontSize: 20,
+  marginBottom: 20,
+},
+playlistModalContent: {
+  backgroundColor: 'black',
+  padding: 20,
+  borderRadius: 10,
+  alignItems: 'center',
+  width: '80%',
+  maxWidth: 400,
+},
 });

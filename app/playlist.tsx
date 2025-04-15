@@ -222,13 +222,13 @@ export default function PlaylistScreen() {
         contentContainerStyle={styles.trackList}
       />
 
-      <IconButton
+      {/* <IconButton
                     icon="pencil-circle"
                     size={40}
                     onPress={showPopup}
                     style={styles.addIcon}
                     iconColor="white"
-                  />
+                  /> */}
     </ThemedView>
   );
 }

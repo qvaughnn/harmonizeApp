@@ -229,10 +229,10 @@ export default function TabTwoScreen() {
             <View style={styles.rightContainer}>
             <IconButton
                icon="plus-circle-outline"
-               size={30}
+               size={25}
                onPress={() => handleAddSong(item)}
                style={styles.add_icon}
-               iconColor="black"
+               iconColor="white"
              />
             </View>
           }
