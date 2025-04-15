@@ -140,26 +140,9 @@ export default function TabTwoScreen() {
   }
 }
 
-  const handleAdd = (item : SpotifyItem) => {
-    console.log("Adding song: $(item.name) by ")
 
-    //add to playlist API call
-  }
 
-  // handles adding a song to a playlist
-  const handleAddSong = async (item: SpotifyItem) => {
-    setSelectedSong(item);
-    try{
-      const key = await createPlaylist(item.name, "authorID", "imageURL");
-      console.log("Key: ", key);
-      if (key !== null){
-        await addSong(key, item.id);
-      }
-    } catch(error){
-      console.error("Error adding song to playlist:", error);   
-    }
-    setModalVisible(true);
-  };
+
 
   const closeModal = () => {
     setModalVisible(false);
@@ -182,6 +165,21 @@ export default function TabTwoScreen() {
     createPlaylist(playlistName, "authorID", "imageURL");
     closeNewPlaylistModal(); // Close the modal after creating the playlist
   };
+
+    // handles adding a song to a playlist
+    const handleAddSong = async (item: SpotifyItem) => {
+      setSelectedSong(item);
+      try{
+        const key = await createPlaylist(item.name, "authorID", "imageURL");
+        console.log("Key: ", key);
+        if (key !== null){
+          await addSong(key, item.id);
+        }
+      } catch(error){
+        console.error("Error adding song to playlist:", error);   
+      }
+      setModalVisible(true);
+    };
 
 
  return (
