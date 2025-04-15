@@ -6,6 +6,8 @@ import { FlatList } from 'react-native-gesture-handler';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { useAuth } from "../../contexts/AuthContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { app, database } from "../config/firebase";
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
 
 type SpotifyItem = {
   id: string;
@@ -17,6 +19,54 @@ type SpotifyItem = {
     images: { url: string }[];
   };
 };
+
+// creates a new playlist with the given name, author, and image and returns the key of the new playlist
+async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
+  const playlistsRef = ref(database, "playlists");
+
+  // generates unique id for playlist
+  const newPlaylistRef = push(playlistsRef);
+
+  const playlistData = {
+    name: name,
+    author: author,
+    image: image,
+    // can add more fields later
+  }
+
+  // Set the playlist data at the new location
+  set(newPlaylistRef, playlistData)
+    .then(() => {
+      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding playlist: ", error);
+    });
+
+  return newPlaylistRef.key;
+}
+
+// adds song to given playlist, only takes spotify id for now
+async function addSong(playlistRef: string, spotifyId: string) {
+  const songsRef = ref(database, `playlists/${playlistRef}/songs/spotify`)
+
+  // generates unique id for song
+  const newSongRef = push(songsRef);
+
+  const songData = {
+    spotifyId: spotifyId, 
+    // can add more data if we want later
+  }
+
+  // Set the playlist data at the new location
+  set(newSongRef, songData)
+    .then(() => {
+      console.log("Song added successfully with ID: ", newSongRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding song: ", error);
+    });
+}
 
 export default function TabTwoScreen() {
  const [searchQuery, setSearchQuery] = React.useState('');
@@ -97,6 +147,7 @@ export default function TabTwoScreen() {
   const handleAddSong = (item: SpotifyItem) => {
     setSelectedSong(item);
     console.log("Adding song: ", item.name);
+    addSong("playlistRef", item.id); // Replace "playlistRef" with the actual playlist reference
     setModalVisible(true);
   };
 
@@ -118,6 +169,7 @@ export default function TabTwoScreen() {
   const addNewPlaylist = () => {
     console.log("Creating new playlist with name: ", playlistName);
     // You can handle the logic to create the playlist here
+    createPlaylist(playlistName, "authorID", "imageURL")
     closeNewPlaylistModal(); // Close the modal after creating the playlist
   };
 
