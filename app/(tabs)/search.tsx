@@ -34,6 +34,8 @@ async function createPlaylist(name: string, author: string, image: string): Prom
     // can add more fields later
   }
 
+  console.log("reference key", newPlaylistRef.key);
+
   // Set the playlist data at the new location
   set(newPlaylistRef, playlistData)
     .then(() => {
@@ -49,6 +51,7 @@ async function createPlaylist(name: string, author: string, image: string): Prom
 // adds song to given playlist, only takes spotify id for now
 async function addSong(playlistRef: string, spotifyId: string) {
   const songsRef = ref(database, `playlists/${playlistRef}/songs/spotify`)
+  console.log("Playlist Ref: ", playlistRef);
 
   // generates unique id for song
   const newSongRef = push(songsRef);
@@ -144,10 +147,17 @@ export default function TabTwoScreen() {
   }
 
   // handles adding a song to a playlist
-  const handleAddSong = (item: SpotifyItem) => {
+  const handleAddSong = async (item: SpotifyItem) => {
     setSelectedSong(item);
-    console.log("Adding song: ", item.name);
-    addSong("playlistRef", item.id); // Replace "playlistRef" with the actual playlist reference
+    try{
+      const key = await createPlaylist(item.name, "authorID", "imageURL");
+      console.log("Key: ", key);
+      if (key !== null){
+        await addSong(key, item.id);
+      }
+    } catch(error){
+      console.error("Error adding song to playlist:", error);   
+    }
     setModalVisible(true);
   };
 
@@ -166,10 +176,10 @@ export default function TabTwoScreen() {
     setPlaylistName(''); // Reset the input field
   };
 
-  const addNewPlaylist = () => {
+
+  const addNewPlaylist = async() => {
     console.log("Creating new playlist with name: ", playlistName);
-    // You can handle the logic to create the playlist here
-    createPlaylist(playlistName, "authorID", "imageURL")
+    createPlaylist(playlistName, "authorID", "imageURL");
     closeNewPlaylistModal(); // Close the modal after creating the playlist
   };
 
