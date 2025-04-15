@@ -227,7 +227,7 @@ export default function PlaylistScreen() {
                     size={40}
                     onPress={showPopup}
                     style={styles.addIcon}
-                    iconColor="black"
+                    iconColor="white"
                   />
     </ThemedView>
   );
