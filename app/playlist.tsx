@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 5,
     marginVertical: 12,
-    resizeMode: 'contain'
+    resizeMode: 'cover'
   },
   owner: {
     color: 'white',
