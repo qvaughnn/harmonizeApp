@@ -14,6 +14,7 @@ type SpotifyItem = {
   name: string;
   images?: { url: string }[];
   uri: string | number;
+  source: 'spotify' | 'firebase';
 };
 
 const AllPlaylists = () => {
@@ -64,50 +65,76 @@ async function createPlaylist(name: string, author: string, image: string): Prom
   return newPlaylistRef.key;
 }
 
-  useEffect(() => {
-    if (token) {
-      fetchPlaylists();
-    }
-  }, [token]);
-
-  const fetchPlaylists = async () => {
-    try {
-      const response = await fetch("https://api.spotify.com/v1/me/playlists", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+useEffect(() => {
+  if (token) {
+    Promise.all([fetchPlaylists(), fetchFirebasePlaylists()])
+      .then(([spotifyResults, firebaseResults]) => {
+        const combined = [...firebaseResults, ...spotifyResults];
+        setResults(combined);
+        setFilteredResults(combined);
+      })
+      .catch((error) => {
+        console.error("Error loading playlists:", error);
       });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        const playlistsData = data.items || [];
-        const fetchedPlaylists = playlistsData.map((playlist: any) => {
-          if (playlist.name && playlist.images && playlist.images.length > 0) {
-            return {
-              id: playlist.id,
-              name: playlist.name,
-              uri: playlist.images[0].url,
-            };
-          } else {
-            return {
-              id: playlist.id,
-              name: playlist.name,
-              uri: require('../../assets/images/coverSample.png'),
-            };
-          }
-        });
-        setResults(fetchedPlaylists);
-        setFilteredResults(fetchedPlaylists);
-      } else {
-        console.error("Error fetching playlists:", data);
-      }
-    } catch (error) {
-      console.error("Playlists fetch error:", error);
+  }
+}, [token]);
+
+
+const fetchPlaylists = async (): Promise<SpotifyItem[]> => {
+  try {
+    const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      const playlistsData = data.items || [];
+      return playlistsData.map((playlist: any) => ({
+        id: playlist.id,
+        name: playlist.name,
+        uri: playlist.images?.[0]?.url || require('../../assets/images/coverSample.png'),
+        source: 'spotify',
+      }));
+    } else {
+      console.error("Error fetching Spotify playlists:", data);
+      return [];
     }
+  } catch (error) {
+    console.error("Playlists fetch error:", error);
+    return [];
+  }
+};
+
+
+  const fetchFirebasePlaylists = async (): Promise<SpotifyItem[]> => {
+    return new Promise((resolve) => {
+      const playlistsRef = ref(database, "playlists");
+  
+      onValue(playlistsRef, (snapshot) => {
+        const data = snapshot.val();
+        const firebasePlaylists: SpotifyItem[] = [];
+  
+        if (data) {
+          Object.entries(data).forEach(([key, value]: [string, any]) => {
+            firebasePlaylists.push({
+              id: key,
+              name: value.name,
+              uri: require('../../assets/images/coverSample.png'), // or load from Firebase if you store real URLs
+              source: 'firebase',
+            });
+          });
+        }
+  
+        resolve(firebasePlaylists);
+      });
+    });
   };
+  
 
   const addPlaylist = () => {
     setVisible(false);
