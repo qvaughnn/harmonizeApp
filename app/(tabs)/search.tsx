@@ -1,7 +1,9 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity, Modal } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Searchbar, List, IconButton } from 'react-native-paper';
 import * as React from 'react';
+import { useEffect, useState } from 'react';
+
 import { FlatList } from 'react-native-gesture-handler';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { useAuth } from "../../contexts/AuthContext";
@@ -13,6 +15,7 @@ type SpotifyItem = {
   id: string;
   name: string;
   type: string;
+  uri: string | number;
   artists?: { name: string }[];
   images?: { url: string }[];
   album?: {
@@ -80,6 +83,8 @@ export default function TabTwoScreen() {
  const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
  const [newPlaylistModalVisible, setNewPlaylistModalVisible] = React.useState(false);
  const [playlistName, setPlaylistName] = React.useState('');
+  const [filteredResults, setFilteredResults] = useState<SpotifyItem[]>([]);
+ 
 
 
  async function handleSearchQueryChange(query: string){
@@ -278,8 +283,57 @@ export default function TabTwoScreen() {
       <View style={styles.modalOverlay}>
         <ThemedView style={styles.modalContent}>
           <Text variant="headlineMedium" style={styles.addTitle}>Add to Playlist</Text>
-          <Button onPress={openNewPlaylistModal} style= {styles.newPlaylistButton} labelStyle={{color: 'black'}}>New Playlist</Button>
-          <Button onPress={closeModal} labelStyle={{ color:'white'}}>Cancel</Button>
+          <Button
+            onPress={openNewPlaylistModal}
+            style= {styles.newPlaylistButton}
+            labelStyle={{color: 'black'}}>
+              New Playlist
+          </Button>
+
+          <GestureHandlerRootView style={{ flex: 1 }}>
+                  <FlatList 
+                    data={filteredResults} 
+                    keyExtractor={(item: SpotifyItem) => item.id}
+                    renderItem={({ item }: { item: SpotifyItem }) => (
+                      <List.Item
+                        // Navigate to the playlist clicked function
+                        onPress={() => onPlaylistClicked(item.id)}
+                        // Use a custom title component to truncate long titles
+                        title={() => (
+                          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+                            {item.name}
+                          </Text>
+                        )}
+                        left={() =>
+                          item.uri ? (
+                            <Image 
+                              source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} 
+                              style={styles.thumbnail} 
+                            />
+                          ) : (
+                            <List.Icon icon="music" />
+                          )
+                        }
+                        right={() => (
+                          <View style={styles.rightContainer}>
+                            <IconButton
+                            icon="arrow-right-circle-outline"
+                            size={25}
+                            style={styles.arrowIcon}
+                            iconColor='white'
+                            />
+                          </View>
+                        )}
+                      />
+                    )}
+                  />
+                </GestureHandlerRootView>
+
+          <Button
+            onPress={closeModal}
+            labelStyle={{ color:'white'}}>
+              Cancel
+          </Button>
         </ThemedView>
       </View>
     </Modal>
@@ -330,6 +384,7 @@ const styles = StyleSheet.create({
  searchbar: {
   width: '100%',
   marginBottom: 20,
+  flex: 1,
  },
  subtitleContainer: {
   width: '100%',
@@ -422,4 +477,9 @@ playlistInput: {
   width: '80%',
   marginBottom: 20,
 },
+arrowIcon: {
+  width: 24,
+  height: 24,
+  right:10
+ },
 });
