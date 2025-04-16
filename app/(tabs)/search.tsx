@@ -290,7 +290,7 @@ export default function TabTwoScreen() {
               New Playlist
           </Button>
 
-          <GestureHandlerRootView style={{ flex: 1 }}>
+          {/* <GestureHandlerRootView style={{ flex: 1 }}>
                   <FlatList 
                     data={filteredResults} 
                     keyExtractor={(item: SpotifyItem) => item.id}
@@ -327,7 +327,7 @@ export default function TabTwoScreen() {
                       />
                     )}
                   />
-                </GestureHandlerRootView>
+                </GestureHandlerRootView> */}
 
           <Button
             onPress={closeModal}
