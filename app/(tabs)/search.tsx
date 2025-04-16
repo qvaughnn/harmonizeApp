@@ -6,6 +6,8 @@ import { FlatList } from 'react-native-gesture-handler';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { useAuth } from "../../contexts/AuthContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { app, database } from "../config/firebase";
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
 
 type SpotifyItem = {
   id: string;
@@ -17,6 +19,57 @@ type SpotifyItem = {
     images: { url: string }[];
   };
 };
+
+// creates a new playlist with the given name, author, and image and returns the key of the new playlist
+async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
+  const playlistsRef = ref(database, "playlists");
+
+  // generates unique id for playlist
+  const newPlaylistRef = push(playlistsRef);
+
+  const playlistData = {
+    name: name,
+    author: author,
+    image: image,
+    // can add more fields later
+  }
+
+  console.log("reference key", newPlaylistRef.key);
+
+  // Set the playlist data at the new location
+  set(newPlaylistRef, playlistData)
+    .then(() => {
+      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding playlist: ", error);
+    });
+
+  return newPlaylistRef.key;
+}
+
+// adds song to given playlist, only takes spotify id for now
+async function addSong(playlistRef: string, spotifyId: string) {
+  const songsRef = ref(database, `playlists/${playlistRef}/songs/spotify`)
+  console.log("Playlist Ref: ", playlistRef);
+
+  // generates unique id for song
+  const newSongRef = push(songsRef);
+
+  const songData = {
+    spotifyId: spotifyId, 
+    // can add more data if we want later
+  }
+
+  // Set the playlist data at the new location
+  set(newSongRef, songData)
+    .then(() => {
+      console.log("Song added successfully with ID: ", newSongRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding song: ", error);
+    });
+}
 
 export default function TabTwoScreen() {
  const [searchQuery, setSearchQuery] = React.useState('');
@@ -87,18 +140,9 @@ export default function TabTwoScreen() {
   }
 }
 
-  const handleAdd = (item : SpotifyItem) => {
-    console.log("Adding song: $(item.name) by ")
 
-    //add to playlist API call
-  }
 
-  // handles adding a song to a playlist
-  const handleAddSong = (item: SpotifyItem) => {
-    setSelectedSong(item);
-    console.log("Adding song: ", item.name);
-    setModalVisible(true);
-  };
+
 
   const closeModal = () => {
     setModalVisible(false);
@@ -115,11 +159,47 @@ export default function TabTwoScreen() {
     setPlaylistName(''); // Reset the input field
   };
 
-  const addNewPlaylist = () => {
+
+  const addNewPlaylist = async() => {
     console.log("Creating new playlist with name: ", playlistName);
-    // You can handle the logic to create the playlist here
-    closeNewPlaylistModal(); // Close the modal after creating the playlist
+    try{
+      const newKey = await createPlaylist(playlistName, "authorID", "imageURL");
+      if (newKey !== null){
+        await onPlaylistClicked(newKey);
+      }
+    } catch(error){
+      console.error("Error creating playlist:", error);   
+    } finally {
+      closeNewPlaylistModal(); // Close the modal after creating the playlist
+    }  
   };
+  const onPlaylistClicked = async (playlistKey: string) => {
+    try{
+      if (selectedSong && playlistKey){
+        await addSong(playlistKey, selectedSong.id);
+      } 
+    } catch(error){
+      console.error("Error adding song to playlist:", error);   
+    } finally{
+      setModalVisible(false);
+      setSelectedSong(null);
+    }
+  };
+
+    // handles adding a song to a playlist
+    const handleAddSong = async (item: SpotifyItem) => {
+      setSelectedSong(item);
+      // try{
+      //   const key = await createPlaylist(item.name, "authorID", "imageURL");
+      //   console.log("Key: ", key);
+      //   if (key !== null){
+      //     await addSong(key, item.id);
+      //   }
+      // } catch(error){
+      //   console.error("Error adding song to playlist:", error);   
+      // }
+      setModalVisible(true);
+    };
 
 
  return (
@@ -177,10 +257,10 @@ export default function TabTwoScreen() {
             <View style={styles.rightContainer}>
             <IconButton
                icon="plus-circle-outline"
-               size={30}
+               size={25}
                onPress={() => handleAddSong(item)}
                style={styles.add_icon}
-               iconColor="black"
+               iconColor="white"
              />
             </View>
           }
