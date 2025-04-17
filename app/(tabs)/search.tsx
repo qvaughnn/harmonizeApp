@@ -126,7 +126,7 @@ const fetchFirebasePlaylists = async (): Promise<SpotifyItem[]> => {
         resolve([]);
         return;
       }
-      const playlistsRef = query(ref(database, "playlists"), orderByChild("author"), equalTo(userId));
+      const playlistsRef = query(ref(database, "playlists"), orderByChild("collaborators"), equalTo(userId));
 
   
       onValue(playlistsRef, (snapshot) => {
