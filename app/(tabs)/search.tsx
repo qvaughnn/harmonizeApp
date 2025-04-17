@@ -22,7 +22,21 @@ type SpotifyItem = {
   album?: {
     images: { url: string }[];
   };
+  source: 'spotify' | 'firebase';
 };
+
+
+export default function TabTwoScreen() {
+ const [searchQuery, setSearchQuery] = React.useState('');
+ const [results, setResults] = React.useState<SpotifyItem[]>([]);
+ const [loading, setLoading] = React.useState(false);
+ const {token} = useAuth();
+ const [modalVisible, setModalVisible] = React.useState(false);
+ const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
+ const [newPlaylistModalVisible, setNewPlaylistModalVisible] = React.useState(false);
+ const [playlistName, setPlaylistName] = React.useState('');
+const [filteredResults, setFilteredResults] = useState<SpotifyItem[]>([]);
+const [firebasePlaylists, setFirebasePlaylists] = useState<SpotifyItem[]>([]);
 
 // creates a new playlist with the given name, author, and image and returns the key of the new playlist
 async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
@@ -75,16 +89,81 @@ async function addSong(playlistRef: string, spotifyId: string) {
     });
 }
 
-export default function TabTwoScreen() {
- const [searchQuery, setSearchQuery] = React.useState('');
- const [results, setResults] = React.useState<SpotifyItem[]>([]);
- const [loading, setLoading] = React.useState(false);
- const {token} = useAuth();
- const [modalVisible, setModalVisible] = React.useState(false);
- const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
- const [newPlaylistModalVisible, setNewPlaylistModalVisible] = React.useState(false);
- const [playlistName, setPlaylistName] = React.useState('');
-  const [filteredResults, setFilteredResults] = useState<SpotifyItem[]>([]);
+const fetchPlaylists = async (): Promise<SpotifyItem[]> => {
+  try {
+    const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      const playlistsData = data.items || [];
+      return playlistsData.map((playlist: any) => ({
+        id: playlist.id,
+        name: playlist.name,
+        uri: playlist.images?.[0]?.url || require('../../assets/images/coverSample.png'),
+        source: 'spotify',
+      }));
+    } else {
+      console.error("Error fetching Spotify playlists:", data);
+      return [];
+    }
+  } catch (error) {
+    console.error("Playlists fetch error:", error);
+    return [];
+  }
+};
+
+const fetchFirebasePlaylists = async (): Promise<SpotifyItem[]> => {
+    return new Promise((resolve) => {
+      if (!userId) {
+        console.error("No userId set — cannot fetch playlists.");
+        resolve([]);
+        return;
+      }
+      const playlistsRef = query(ref(database, "playlists"), orderByChild("author"), equalTo(userId));
+
+  
+      onValue(playlistsRef, (snapshot) => {
+        const data = snapshot.val();
+        const firebasePlaylists: SpotifyItem[] = [];
+  
+        if (data) {
+          Object.entries(data).forEach(([key, value]: [string, any]) => {
+            firebasePlaylists.push({
+              id: key,
+              name: value.name,
+              uri: require('../../assets/images/coverSample.png'), // or load from Firebase if you store real URLs
+              source: 'firebase',
+              type: ''
+            });
+          });
+        }
+  
+        resolve(firebasePlaylists);
+      });
+    });
+  };
+
+
+useEffect(() => {
+  if (token) {
+    Promise.all([fetchPlaylists(), fetchFirebasePlaylists()])
+      .then(([spotifyResults, firebaseResults]) => {
+        const combined = [...firebaseResults, ...spotifyResults];
+        setResults(combined);
+        setFilteredResults(combined);
+      })
+      .catch((error) => {
+        console.error("Error loading playlists:", error);
+      });
+  }
+}, [token]);
  
 
 
@@ -293,7 +372,42 @@ export default function TabTwoScreen() {
               New Playlist
           </Button>
 
-          {/* <GestureHandlerRootView style={{ flex: 1 }}>
+          {
+        //   <FlatList 
+        //   data={firebasePlaylists} 
+        //   keyExtractor={(item: SpotifyItem) => item.id}
+        //   renderItem={({ item }: { item: SpotifyItem }) => (
+        //     <List.Item
+        //       onPress={() => onPlaylistClicked(item.id)}
+        //       title={() => (
+        //         <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+        //           {item.name}
+        //         </Text>
+        //       )}
+        //       left={() =>
+        //         item.uri ? (
+        //           <Image 
+        //             source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri as number} 
+        //             style={styles.thumbnail} 
+        //           />
+        //         ) : (
+        //           <List.Icon icon="music" />
+        //         )
+        //       }
+        //       right={() => (
+        //         <View style={styles.rightContainer}>
+        //           <IconButton
+        //             icon="arrow-right-circle-outline"
+        //             size={25}
+        //             style={styles.arrowIcon}
+        //             iconColor='white'
+        //           />
+        //         </View>
+        //       )}
+        //     />
+        //   )}
+        // />
+        /* <GestureHandlerRootView style={{ flex: 1 }}>
                   <FlatList 
                     data={filteredResults} 
                     keyExtractor={(item: SpotifyItem) => item.id}
