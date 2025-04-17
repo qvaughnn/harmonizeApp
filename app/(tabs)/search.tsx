@@ -28,7 +28,7 @@ type SpotifyItem = {
 
 export default function TabTwoScreen() {
  const [searchQuery, setSearchQuery] = React.useState('');
- const [results, setResults] = React.useState<SpotifyItem[]>([]);
+ const [searchResults, setSearchResults] = React.useState<SpotifyItem[]>([]);
  const [loading, setLoading] = React.useState(false);
  const {token} = useAuth();
  const [modalVisible, setModalVisible] = React.useState(false);
@@ -156,7 +156,7 @@ useEffect(() => {
     Promise.all([fetchPlaylists(), fetchFirebasePlaylists()])
       .then(([spotifyResults, firebaseResults]) => {
         const combined = [...firebaseResults, ...spotifyResults];
-        setResults(combined);
+        //setResults(combined);
         setFilteredResults(combined);
       })
       .catch((error) => {
@@ -177,7 +177,7 @@ useEffect(() => {
     }
     getResults(query);
   } else {
-    setResults([]); // Clear results
+    setSearchResults([]); // Clear results
   }
 }
  async function getResults(query: string) {
@@ -217,7 +217,7 @@ useEffect(() => {
       ...(data.albums?.items || []),
     ];
     console.log(results);
-    setResults(results);
+    setSearchResults(results);
   } catch (error) {
     console.error("Error fetching Spotify search:", error);
   } finally {
@@ -307,7 +307,7 @@ useEffect(() => {
 
       <GestureHandlerRootView style={{ flex: 1 }}>
         <FlatList 
-          data={results} 
+          data={searchResults} 
           keyExtractor={(item: SpotifyItem) => item.id}
           renderItem={({ item}: { item: SpotifyItem }) => (
           <List.Item
