@@ -10,6 +10,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { app, database } from "../config/firebase";
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { userId } from '../index';
 
 type SpotifyItem = {
   id: string;
@@ -168,9 +169,11 @@ export default function TabTwoScreen() {
   const addNewPlaylist = async() => {
     console.log("Creating new playlist with name: ", playlistName);
     try{
-      const newKey = await createPlaylist(playlistName, "authorID", "imageURL");
-      if (newKey !== null){
-        await onPlaylistClicked(newKey);
+      if (userId !== null){
+        const newKey = await createPlaylist(playlistName, userId, "imageURL");
+        if (newKey !== null){
+          await onPlaylistClicked(newKey);
+        }
       }
     } catch(error){
       console.error("Error creating playlist:", error);   

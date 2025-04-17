@@ -10,6 +10,12 @@ import { useAuth } from "../contexts/AuthContext";
 import { app, database } from "./config/firebase";
 import { useRouter } from 'expo-router';
 
+export let userId: string | null = null;
+
+export const setUserId = (id: string) => {
+  userId = id;
+};
+
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 const REDIRECT_URI = 'exp://10.141.174.39:8081';
@@ -184,7 +190,11 @@ export default function HomeScreen() {
         expiresAt: Date.now() + tokenData.expires_in * 1000,
         userProfile,
       });
+      
       console.log("User logged in:", userCode)
+      if (userCode!== null) {
+        setUserId(userCode);
+      }
       console.log("User data stored in Firebase:", userProfile);
     } catch (error) {
       console.error("Token exchange error:", error);
