@@ -8,6 +8,7 @@ import { FlatList } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { app, database } from "../config/firebase";
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { userId } from '../index';
 
 type SpotifyItem = {
   id: string;
@@ -138,8 +139,9 @@ const fetchPlaylists = async (): Promise<SpotifyItem[]> => {
 
   const addPlaylist = () => {
     setVisible(false);
-    createPlaylist(text, "playlistID", "../assets/images/coverSample.png");
-
+    if (userId !== null) {
+      createPlaylist(text, userId, "../assets/images/coverSample.png");
+    }
   };
 
   const [visible, setVisible] = useState(false);
@@ -158,7 +160,9 @@ const fetchPlaylists = async (): Promise<SpotifyItem[]> => {
   const addNewPlaylist = () => {
     console.log("Creating new playlist with name: ", playlistName);
     // You can handle the logic to create the playlist here
-    createPlaylist(playlistName, "authorID", "imageURL");
+    if (userId!== null) {
+      createPlaylist(playlistName, userId, "imageURL");
+    }
     closeNewPlaylistModal(); // Close the modal after creating the playlist
   };
 
