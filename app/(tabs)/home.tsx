@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Dimensions, Pressable, View, Modal, Button} from 'react-native';
-import { Text, Avatar, Card } from 'react-native-paper';
+import { Text, Avatar, Card, IconButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
 import { useAuth } from '../../contexts/AuthContext';
@@ -90,6 +90,10 @@ export default function Home() {
     setModalVisible(!modalVisbile);
   }
 
+  const [visible, setVisible] = useState(false);
+
+  const showPopup = () => setVisible(true);
+
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
@@ -136,12 +140,13 @@ export default function Home() {
           ))}
         </View>
 
-      <Pressable onPress={toggleModal}>
-          <Image
-            source={require('../../assets/images/add-icon.png')}
-            style={styles.add_icon}
-          />
-      </Pressable>
+      <IconButton
+        icon="information-outline"
+        size={40}
+        onPress={toggleModal}
+        style={styles.addIcon}
+        iconColor="white"
+      />
 
       <Modal
         animationType = 'fade'
@@ -151,8 +156,9 @@ export default function Home() {
       >
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
-            <Text style={styles.modalText}>Create a playlist</Text>
-            <Button title="Close" onPress={toggleModal} />
+            <Text style={styles.subtitleAbout}>About Us</Text>
+            <Text style={styles.modalText}>Want to connect with a{"\n"}different music platform than you?{"\n"}Create a collaborative playlist{"\n"}with your friends!</Text>
+            <Button title="Got it!" onPress={toggleModal} />
           </View>
         </View>
 
@@ -188,6 +194,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
+  subtitleAbout: {
+    fontWeight: 'bold',
+    color: 'grey',
+    fontSize: 30,
+    marginBottom: 10,
+  },
   viewPress: {
     position: 'absolute',
     top: 185,
@@ -209,13 +221,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 515,
     right: 25,
-  },
-  add_icon: {
-    position: 'absolute',
-    height: 40,
-    width: 40,
-    bottom: 100,
-    left: 140,
   },
   listContainer:{
     width: '100%',
@@ -260,7 +265,7 @@ const styles = StyleSheet.create({
   modalView: {
     backgroundColor: 'white',
     borderRadius: 20,
-    padding: 35,
+    padding: 25,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
@@ -272,7 +277,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalText: {
-    marginBottom: 15,
+    marginBottom: 10,
     textAlign: 'center',
   },
+  addIcon: {
+    right: 10,
+    bottom: 100,
+    position: 'absolute',
+    justifyContent: 'flex-start',
+   },
 });
