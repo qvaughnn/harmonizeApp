@@ -8,7 +8,7 @@ export type Playlist = {
   cover_art: string;
   owner: UserRef;
   harmonizers: UserRef[];
-  og_platform: 'spotify' | 'apple';
+  og_platform: 'spotify' | 'apple' | 'harmonize';
   songs: Song[];
 };
 

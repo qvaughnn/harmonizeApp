@@ -3,27 +3,54 @@ import { Image, StyleSheet, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text, Searchbar, List, Button, IconButton, Modal, TextInput } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { FlatList } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, FlatList } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
-import { app, database } from "../config/firebase";
-import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { database } from '../config/firebase';
+import { ref, set, get, onValue, push } from 'firebase/database';
+import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
 
-type SpotifyItem = {
-  id: string;
-  name: string;
-  images?: { url: string }[];
-  uri: string | number;
-};
+const defaultCover = require('../../assets/images/coverSample.png');
 
 const AllPlaylists = () => {
-  const { token } = useAuth(); 
+  const { currentUser } = useAuth(); 
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<SpotifyItem[]>([]);
-  const [filteredResults, setFilteredResults] = useState<SpotifyItem[]>([]);
+  const [results, setResults] = useState<PlaylistPreview[]>([]);
+  const [filteredResults, setFilteredResults] = useState<PlaylistPreview[]>([]);
 
-  
+    // Fetch playlists the user has access to from Firebase
+    useEffect(() => {
+      if (!currentUser?.id) return;
+      const userPlaylistsRef = ref(database, `users/${currentUser.id}/userPlaylists`);
+      const unsubscribe = onValue(
+        userPlaylistsRef,
+        async (snapshot) => {
+          if (snapshot.exists()) {
+            const ids: string[] = Object.keys(snapshot.val() || {});
+            const promises = ids.map((id) =>
+              get(ref(database, `playlists/${id}`)).then((snap) => (snap.exists() ? snap.val() : null))
+            );
+            const playlistsData = (await Promise.all(promises)).filter((p) => p);
+            const previews: PlaylistPreview[] = playlistsData.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              cover_art: p.cover_art,
+            }));
+            setResults(previews);
+            setFilteredResults(previews);
+          } else {
+            setResults([]);
+            setFilteredResults([]);
+          }
+        },
+        (error) => {
+          console.error('Error fetching user playlists:', error);
+        }
+      );
+      return () => unsubscribe();
+    }, [currentUser]);
+
+  // Handle search filtering
   function handleSearchQueryChange(query: string): void {
     setSearchQuery(query);
 
@@ -38,88 +65,47 @@ const AllPlaylists = () => {
     }
   }
 
-  // creates a new playlist with the given name, author, and image and returns the key of the new playlist
-async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
-  const playlistsRef = ref(database, "playlists");
+  // Create a new playlist in Firebase and add reference under user tree
+  const createPlaylist = async (name: string) => {
+    if (!currentUser?.id) return;
+    const playlistsRef = ref(database, 'playlists');
+    const newRef = push(playlistsRef);
+    const id = newRef.key as string;
 
-  // generates unique id for playlist
-  const newPlaylistRef = push(playlistsRef);
+    // Build full Playlist data
+    const playlistData: Playlist = {
+      id,
+      name,
+      description: '',
+      cover_art: defaultCover,
+      owner: currentUser as UserRef,
+      harmonizers: [currentUser as UserRef],
+      og_platform: 'harmonize',
+      songs: [] as Song[], // start with no songs
+    };
 
-  const playlistData = {
-    name: name,
-    author: author,
-    image: image,
-    // can add more fields later
-  }
+    // Save full playlist under /playlists/{id}
+    await set(newRef, playlistData);
+    // Reference it under the user for quick lookup
+    await set(ref(database, `users/${currentUser.id}/userPlaylists/${id}`), true);
 
-  // Set the playlist data at the new location
-  set(newPlaylistRef, playlistData)
-    .then(() => {
-      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
-    })
-    .catch((error) => {
-      console.error("Error adding playlist: ", error);
-    });
-
-  return newPlaylistRef.key;
-}
-
-  useEffect(() => {
-    if (token) {
-      fetchPlaylists();
-    }
-  }, [token]);
-
-  const fetchPlaylists = async () => {
-    try {
-      const response = await fetch("https://api.spotify.com/v1/me/playlists", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        const playlistsData = data.items || [];
-        const fetchedPlaylists = playlistsData.map((playlist: any) => {
-          if (playlist.name && playlist.images && playlist.images.length > 0) {
-            return {
-              id: playlist.id,
-              name: playlist.name,
-              uri: playlist.images[0].url,
-            };
-          } else {
-            return {
-              id: playlist.id,
-              name: playlist.name,
-              uri: require('../../assets/images/coverSample.png'),
-            };
-          }
-        });
-        setResults(fetchedPlaylists);
-        setFilteredResults(fetchedPlaylists);
-      } else {
-        console.error("Error fetching playlists:", data);
-      }
-    } catch (error) {
-      console.error("Playlists fetch error:", error);
-    }
+    // Update local previews
+    const newPreview: PlaylistPreview = { id, name, cover_art: defaultCover };
+    setResults((prev) => [newPreview, ...prev]);
+    setFilteredResults((prev) => [newPreview, ...prev]);
   };
 
-  const addPlaylist = () => {
-    setVisible(false);
-    createPlaylist(text, "playlistID", "../assets/images/coverSample.png");
-
-  };
-
+  // Modal State
   const [visible, setVisible] = useState(false);
   const [text, setText] = useState('');
-
   const showPopup = () => setVisible(true);
   const hidePopup = () => setVisible(false);
+
+  const addPlaylist = () => {
+    hidePopup();
+    createPlaylist(text.trim());
+    setText('');
+  };
 
 
   return (
@@ -146,8 +132,8 @@ async function createPlaylist(name: string, author: string, image: string): Prom
       <GestureHandlerRootView style={{ flex: 1 }}>
         <FlatList 
           data={filteredResults} 
-          keyExtractor={(item: SpotifyItem) => item.id}
-          renderItem={({ item }: { item: SpotifyItem }) => (
+          keyExtractor={(item: PlaylistPreview) => item.id}
+          renderItem={({ item }: { item: PlaylistPreview }) => (
             <List.Item
               // Navigate to the playlist page when pressed, passing the id
               onPress={() => router.push(`/playlist?id=${item.id}`)}
@@ -158,9 +144,9 @@ async function createPlaylist(name: string, author: string, image: string): Prom
                 </Text>
               )}
               left={() =>
-                item.uri ? (
+                item.cover_art ? (
                   <Image 
-                    source={typeof item.uri === 'string' ? { uri: item.uri } : (item.uri as number)} 
+                    source={typeof item.cover_art === 'string' ? { uri: item.cover_art } : item.cover_art} 
                     style={styles.thumbnail} 
                   />
                 ) : (
@@ -180,7 +166,7 @@ async function createPlaylist(name: string, author: string, image: string): Prom
         />
       </GestureHandlerRootView>
 
-        <Modal 
+      <Modal 
         visible={visible} 
         onDismiss={hidePopup} 
         contentContainerStyle={styles.modalContainer}
