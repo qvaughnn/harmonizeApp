@@ -3,13 +3,16 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { app, database } from "../app/config/firebase";
 import { ref, get } from "firebase/database";
 import { refreshSpotifyToken } from "../app/services/spotifyAuth";
+import { UserRef } from '@/types'; // Adjust if needed
+
 
 interface AuthContextProps {
   token: string | null;
   setToken: (token: string | null) => void;
   spotifyUserId: string | null;
   setSpotifyUserId: (id: string | null) => void;
-  // isLoggedIn: boolean;
+  currentUser: UserRef | null;
+  setCurrentUser: (user: UserRef | null) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -17,6 +20,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [spotifyUserId, setSpotifyUserId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserRef | null>(null);
   // const isLoggedIn = !!spotifyUserId;
 
   // On app load, fetch stored token for the current user if needed.
@@ -48,7 +52,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setToken, 
         spotifyUserId, 
         setSpotifyUserId,
-        // isLoggedIn, 
+        currentUser,
+        setCurrentUser
         }}
       >
       {children}
