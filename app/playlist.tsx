@@ -163,62 +163,66 @@ export default function PlaylistScreen() {
 
   return (
     <ThemedView style={styles.overall}>
-      <View style={styles.headerContainer}>
-        <IconButton
-          icon="arrow-left"
-          size={30}
-          onPress={() => router.back()}
-          style={styles.backButton}
-          iconColor="grey"
-        />
-        <Text style={styles.playlistTitle}>
-          {playlist.name}
-        </Text>
-      </View>
-
-      <View style={styles.coverContainer}>
-        {playlist.cover_art && (
-          <Image
-            source={
-              typeof playlist.cover_art === 'string'
-                ? { uri: playlist.cover_art }
-                : playlist.cover_art
-            }
-            style={styles.coverImage}
-          />
-        )}
-        <View>
-          <Text style={styles.owner}>
-            Owner: { (playlist.owner as UserRef).name }
-            {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
-          </Text>
-          {playlist.description ? (
-            <Text style={styles.description}>{playlist.description}</Text>
-          ) : null} 
-        </View>
-
-        <Pressable onPress={() => router.push('/friends')}>
-          <Text style={styles.export}>Export</Text>
-        </Pressable>
-
-      </View>
-      
       <FlatList
         data={playlist.songs}
         keyExtractor={(item, index) => `${item.spotify_id}_${index}`}
         contentContainerStyle={styles.trackList}
-        renderItem={({ item }) => (
-          <View style={styles.trackItem}>
-            {item.cover_art ? (
-              <Image source={{ uri: item.cover_art }} style={styles.trackImage} />
-            ) : null}
-            <View style={styles.trackInfo}>
-              <Text style={styles.trackName}>{item.name}</Text>
-              <Text style={styles.trackArtist}>{item.artist}</Text>
+        ListHeaderComponent={(
+        <View>
+          
+          <View style={styles.headerContainer}>
+            <IconButton
+              icon="arrow-left"
+              size={30}
+              onPress={() => router.back()}
+              style={styles.backButton}
+              iconColor="grey"
+            />
+            <Text style={styles.playlistTitle}>
+              {playlist.name}
+            </Text>
+          </View>
+
+          <View style={styles.coverContainer}>
+            {playlist.cover_art && (
+              <Image
+                source={
+                  typeof playlist.cover_art === 'string'
+                    ? { uri: playlist.cover_art }
+                    : playlist.cover_art
+                }
+                style={styles.coverImage}
+              />
+            )}
+            <View>
+              <Text style={styles.owner}>
+                Owner: { (playlist.owner as UserRef).name }
+                {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
+              </Text>
+              {playlist.description ? (
+                <Text style={styles.description}>{playlist.description}</Text>
+              ) : null} 
+
+            <Pressable onPress={() => router.push('/friends')}>
+              <Text style={styles.export}>Export</Text>
+            </Pressable>
             </View>
           </View>
+        </View>
+          
         )}
-      />
+            renderItem={({ item }) => (
+              <View style={styles.trackItem}>
+                {item.cover_art ? (
+                  <Image source={{ uri: item.cover_art }} style={styles.trackImage} />
+                ) : null}
+                <View style={styles.trackInfo}>
+                  <Text style={styles.trackName}>{item.name}</Text>
+                  <Text style={styles.trackArtist}>{item.artist}</Text>
+                </View>
+              </View>
+            )}
+          />
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
         icon="pencil-circle"
