@@ -121,6 +121,10 @@ export default function PlaylistScreen() {
     setSearchResults([]);
   };
 
+  const removeSong = async (songToRemove: Song) => {
+  }
+  
+
   // const renderTrackItem = ({ item }: { item: any }) => {
   //   const track = item.track;
   //   if (!track) return null;
@@ -220,6 +224,12 @@ export default function PlaylistScreen() {
                   <Text style={styles.trackName}>{item.name}</Text>
                   <Text style={styles.trackArtist}>{item.artist}</Text>
                 </View>
+                <IconButton
+                  icon="minus-circle"
+                  size={24}
+                  onPress={() => removeSong(item)}
+                  iconColor="white"
+                />
               </View>
             )}
           />
