@@ -163,6 +163,12 @@ export default function PlaylistScreen() {
 
   return (
     <ThemedView style={styles.overall}>
+      <FlatList
+  data={playlist.songs}
+  keyExtractor={(item, index) => `${item.spotify_id}_${index}`}
+  contentContainerStyle={styles.trackList}
+  ListHeaderComponent={
+    <View>
       <View style={styles.headerContainer}>
         <IconButton
           icon="arrow-left"
@@ -187,38 +193,31 @@ export default function PlaylistScreen() {
             style={styles.coverImage}
           />
         )}
-        <View>
-          <Text style={styles.owner}>
-            Owner: { (playlist.owner as UserRef).name }
-            {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
-          </Text>
-          {playlist.description ? (
-            <Text style={styles.description}>{playlist.description}</Text>
-          ) : null} 
-        </View>
-
+        <Text style={styles.owner}>
+          Owner: {(playlist.owner as UserRef).name}
+        </Text>
+        {playlist.description ? (
+          <Text style={styles.description}>{playlist.description}</Text>
+        ) : null}
         <Pressable onPress={() => router.push('/friends')}>
           <Text style={styles.export}>Export</Text>
         </Pressable>
-
       </View>
-      
-      <FlatList
-        data={playlist.songs}
-        keyExtractor={(item, index) => `${item.spotify_id}_${index}`}
-        contentContainerStyle={styles.trackList}
-        renderItem={({ item }) => (
-          <View style={styles.trackItem}>
-            {item.cover_art ? (
-              <Image source={{ uri: item.cover_art }} style={styles.trackImage} />
-            ) : null}
-            <View style={styles.trackInfo}>
-              <Text style={styles.trackName}>{item.name}</Text>
-              <Text style={styles.trackArtist}>{item.artist}</Text>
-            </View>
-          </View>
-        )}
-      />
+    </View>
+  }
+  renderItem={({ item }) => (
+    <View style={styles.trackItem}>
+      {item.cover_art ? (
+        <Image source={{ uri: item.cover_art }} style={styles.trackImage} />
+      ) : null}
+      <View style={styles.trackInfo}>
+        <Text style={styles.trackName}>{item.name}</Text>
+        <Text style={styles.trackArtist}>{item.artist}</Text>
+      </View>
+    </View>
+  )}
+/>
+
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
         icon="pencil-circle"
