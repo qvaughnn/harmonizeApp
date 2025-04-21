@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image, FlatList, Pressable } from 'react-native';
+import { StyleSheet, View, Image, FlatList, Pressable, Button } from 'react-native';
 import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,164 @@ type SpotifyTrack = {
   duration_ms: number;
 };
 
+// covers random punctuation cases when converting
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[\(\)]/g, "-") // replace ( and ) with -
+    .replace(/\s*-\s*/g, "-") // unify spacing around hyphens
+    .replace(/\s+/g, " ") // normalize spaces
+    .trim();
+}
+
+// used as input to converter functions
+type SongMatchInput = {
+  name: string;
+  artists: string[];
+  durationMs: number;
+  token: string;
+};
+
+// takes name artists, and duration as input and returns the best Apple Music match or null if no matches
+export async function getBestAppleMusicMatch({
+  name,
+  artists,
+  durationMs,
+  token,
+}: SongMatchInput): Promise<string | null> {
+  const storefront = "us";
+  const searchTerm = encodeURIComponent(`${name} ${artists.join(" ")}`);
+  const url = `https://api.music.apple.com/v1/catalog/${storefront}/search?term=${searchTerm}&types=songs&limit=10`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    console.error("Apple Music API error:", response.statusText);
+    return null;
+  }
+
+  const data = await response.json();
+  const songs = data.results?.songs?.data;
+  if (!songs || songs.length === 0) return null;
+
+  const inputArtistsLower = artists.map((a) => a.toLowerCase().trim());
+  const normalizedInputName = normalizeTitle(name);
+
+  let bestMatch: { id: string; score: number } | null = null;
+
+  for (const song of songs) {
+    const songName = song.attributes.name;
+    const songArtist = song.attributes.artistName.toLowerCase();
+    const songDurationMs = song.attributes.durationInMillis;
+
+    const normalizedSongName = normalizeTitle(songName);
+    const songArtists = songArtist
+      .split(/,|&|feat\.|featuring|\+|with/i)
+      .map((a: string) => a.trim())
+      .filter((a: string | any[]) => a.length > 0);
+
+    const nameMatch =
+      normalizedSongName.includes(normalizedInputName) ||
+      normalizedInputName.includes(normalizedSongName);
+
+    const matchingArtistCount = inputArtistsLower.filter((inputArtist) =>
+      songArtists.includes(inputArtist)
+    ).length;
+
+    const artistCountMatch =
+      Math.abs(songArtists.length - inputArtistsLower.length) <= 1;
+
+    const durationDiff = Math.abs(songDurationMs - durationMs) / 1000;
+
+    if (nameMatch && matchingArtistCount > 0 && durationDiff < 15 && artistCountMatch) {
+      const score = matchingArtistCount * 10 + (15 - durationDiff);
+
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { id: song.id, score };
+      }
+    }
+  }
+
+  return bestMatch?.id ?? null;
+}
+
+// takes name artists, and duration as input and returns the best Spotify match or null if no matches
+export async function getBestSpotifyMatch({
+  name,
+  artists,
+  durationMs,
+  token,
+}: SongMatchInput): Promise<string | null> {
+  const searchTerm = encodeURIComponent(`${name} ${artists.join(" ")}`);
+  const url = `https://api.spotify.com/v1/search?q=${searchTerm}&type=track&limit=10`;
+
+  console.log("Spotify Search URL:", url);
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    console.error("Spotify API error:", response.statusText);
+    return null;
+  }
+
+  const data = await response.json();
+  const tracks = data.tracks?.items;
+  console.log("Tracks returned:", tracks?.length);
+  if (!tracks || tracks.length === 0) return null;
+
+  const inputArtistsLower = artists.map((a) => a.toLowerCase().trim());
+
+  let bestMatch: { id: string; score: number } | null = null;
+
+  for (const track of tracks) {
+    const trackName = track.name.toLowerCase();
+    const trackArtists = track.artists.map((a: any) => a.name.toLowerCase());
+    const normalizedInputName = normalizeTitle(name);
+    const normalizedTrackName = normalizeTitle(trackName);
+    const trackDurationMs = track.duration_ms;
+
+    const nameMatch =
+      normalizedTrackName.includes(normalizedInputName) ||
+      normalizedInputName.includes(normalizedTrackName);
+    const matchingArtistCount = inputArtistsLower.filter((inputArtist) =>
+      trackArtists.includes(inputArtist)
+    ).length;
+    const artistCountMatch =
+      Math.abs(trackArtists.length - inputArtistsLower.length) <= 1;
+    const durationDiff = Math.abs(trackDurationMs - durationMs) / 1000;
+
+    console.log("Checking track:", {
+      name: track.name,
+      trackArtists,
+      trackDurationMs,
+      nameMatch,
+      matchingArtistCount,
+      durationDiff,
+      artistCountMatch,
+    });
+
+    if (nameMatch && matchingArtistCount > 0 && durationDiff < 15 && artistCountMatch) {
+      const score = matchingArtistCount * 10 + (5 - durationDiff);
+      console.log("Track is a viable match. Score:", score);
+
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { id: track.id, score };
+      }
+    }
+  }
+
+  console.log("Best Match:", bestMatch);
+  return bestMatch?.id ?? null;
+}
+
 export default function PlaylistScreen() {
   const router = useRouter();
   const { currentUser, token } = useAuth();
@@ -34,7 +192,6 @@ export default function PlaylistScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-
   
   // Load Playlist from Firebase
   useEffect(() => {
@@ -92,6 +249,22 @@ export default function PlaylistScreen() {
     const timeout = setTimeout(fetchTracks, 300);
     return () => clearTimeout(timeout);
   }, [searchQuery, token]);
+
+  const testMatch = async () => {
+    try {
+      const result = await getBestSpotifyMatch({
+        name: "Wake Me Up (Avicii Speed Remix)",
+        artists: ["Avicii"],
+        durationMs: 425000,
+        token: token || '',
+      });
+      console.log("token:", token)
+
+      console.log("Spotify Match Result:", result);
+    } catch (err) {
+      console.error("Error in testMatch:", err);
+    }
+  };
 
   // Add selected track to playlist
   const selectTrack = async (track: SpotifyTrack) => {
@@ -164,6 +337,7 @@ export default function PlaylistScreen() {
   return (
     <ThemedView style={styles.overall}>
       <View style={styles.headerContainer}>
+      <Button title="Test Spotify Match" onPress={testMatch} />
         <IconButton
           icon="arrow-left"
           size={30}
