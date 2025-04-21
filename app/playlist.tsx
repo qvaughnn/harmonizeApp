@@ -233,6 +233,7 @@ export default function PlaylistScreen() {
         size={40}
         style={styles.addIcon}
         onPress={() => setModalVisible(true)}
+        iconColor='black'
       />
       {/* Search & Add Modal */}
       <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)}>
@@ -242,6 +243,12 @@ export default function PlaylistScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchbar}
+          />
+          <IconButton
+            icon="close"
+            size={30}
+            onPress={() => setModalVisible(false)}
+            style={styles.closeinbar}
           />
           {searchLoading ? (
             <ActivityIndicator animating size="small" />
@@ -262,7 +269,7 @@ export default function PlaylistScreen() {
               )}
             />
           )}
-          <IconButton icon="close" size={30} onPress={() => setModalVisible(false)} />
+          
         </View>
       </Modal>
     </ThemedView>
@@ -361,16 +368,23 @@ const styles = StyleSheet.create({
    addIcon: { 
     position: 'absolute', 
     right: 20, 
-    bottom: 20 
+    bottom: 40
   },
    modalContent: { 
     backgroundColor: 'white', 
-    padding: 20, 
+    padding: 30,
     margin: 20, 
-    borderRadius: 8 
+    borderRadius: 8,
+    height: '80%',
+    top: 70
   },
    searchbar: { 
-    marginBottom: 10 
+    marginBottom: 10,
+    width: '90%'
+  },
+  closeinbar: {
+    top: -63,
+    left: 285
   },
    thumbnail: { 
     width: 40, 
