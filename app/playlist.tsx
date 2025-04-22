@@ -63,6 +63,7 @@ export async function getBestAppleMusicMatch({
 
   const data = await response.json();
   const songs = data.results?.songs?.data;
+  console.log("Tracks returned:", songs?.length);
   if (!songs || songs.length === 0) return null;
 
   const inputArtistsLower = artists.map((a) => a.toLowerCase().trim());
@@ -94,8 +95,19 @@ export async function getBestAppleMusicMatch({
 
     const durationDiff = Math.abs(songDurationMs - durationMs) / 1000;
 
-    if (nameMatch && matchingArtistCount > 0 && durationDiff < 15 && artistCountMatch) {
+    console.log("Checking track:", {
+      songName,
+      songArtists,
+      songDurationMs,
+      nameMatch,
+      matchingArtistCount,
+      durationDiff,
+      artistCountMatch,
+    });
+
+    if (nameMatch && matchingArtistCount > 0 && artistCountMatch) {
       const score = matchingArtistCount * 10 + (15 - durationDiff);
+      console.log("Track is a viable match. Score:", score);
 
       if (!bestMatch || score > bestMatch.score) {
         bestMatch = { id: song.id, score };
@@ -103,6 +115,7 @@ export async function getBestAppleMusicMatch({
     }
   }
 
+  console.log("Best Match:", bestMatch);
   return bestMatch?.id ?? null;
 }
 
@@ -165,7 +178,7 @@ export async function getBestSpotifyMatch({
       artistCountMatch,
     });
 
-    if (nameMatch && matchingArtistCount > 0 && durationDiff < 15 && artistCountMatch) {
+    if (nameMatch && matchingArtistCount > 0 && artistCountMatch) {
       const score = matchingArtistCount * 10 + (5 - durationDiff);
       console.log("Track is a viable match. Score:", score);
 
@@ -252,11 +265,11 @@ export default function PlaylistScreen() {
 
   const testMatch = async () => {
     try {
-      const result = await getBestSpotifyMatch({
-        name: "Wake Me Up (Avicii Speed Remix)",
-        artists: ["Avicii"],
-        durationMs: 425000,
-        token: token || '',
+      const result = await getBestAppleMusicMatch({
+        name: "Pink Pony Club",
+        artists: ["Chappell Roan"],
+        durationMs: 258000,
+        token: 'redacted',
       });
       console.log("token:", token)
 
