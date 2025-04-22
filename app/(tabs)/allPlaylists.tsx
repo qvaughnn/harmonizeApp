@@ -134,7 +134,7 @@ const AllPlaylists = () => {
           style={styles.searchbar}
         />
       </View>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 , width: '100%'}}>
         <FlatList 
           data={filteredResults} 
           keyExtractor={(item: PlaylistPreview) => item.id}
@@ -232,15 +232,15 @@ const styles = StyleSheet.create({
   width: 80,
   height: 80,
   borderRadius: 4,
-  left:25
+  marginLeft: 40
  },
  arrowIcon: {
   width: 24,
   height: 24,
-  right:10
+  marginRight: 25
  },
  name:{
-  left: 20,
+  left: 5,
   color: 'white',
   width: '87%',
   fontSize: 18,
