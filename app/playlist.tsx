@@ -40,6 +40,7 @@ export default function PlaylistScreen() {
   const [selectedSongToRemove, setSelectedSongToRemove] = useState<Song | null>(null);
 
   const [editMode, setEditMode] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
 
   
   // Load Playlist from Firebase
@@ -219,7 +220,7 @@ export default function PlaylistScreen() {
               <IconButton
                 icon="export-variant"
                 size={28}
-                onPress={()=>router.push('/friends')}
+                onPress={()=>setExportVisible(true)}
                 iconColor="white"
               />
             {/* </Pressable> */}
@@ -273,6 +274,26 @@ export default function PlaylistScreen() {
               </View>
             )}
           />
+     {/* Export Modal */}
+     <Modal visible={exportVisible} onDismiss={() => setExportVisible(false)}>
+       <View style={styles.exportContent}>
+         <Pressable>
+           <Text style={styles.exportText}>
+             Export to Spotify
+           </Text>
+         </Pressable>
+         <Pressable>
+           <Text style={styles.exportText}>
+             Export to Apple Music
+           </Text>
+         </Pressable>
+         <Pressable onPress={() => setExportVisible(false)}>
+           <Text style={styles.exportClose}>
+             Cancel
+           </Text>
+         </Pressable>
+       </View>
+     </Modal>
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
         icon="pencil-circle"
@@ -389,12 +410,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 10,
+    textAlign: 'center',
   },
   description: {
     color: 'white',
     fontSize: 14,
     fontWeight: 'regular',
     marginBottom: 20,
+    textAlign: 'center',
   },
   export: {
     color: 'white',
@@ -523,6 +546,22 @@ const styles = StyleSheet.create({
     fontWeight: 'regular',
     marginLeft: 20,
   },
-
-  
+  exportContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    margin: 10,
+    borderRadius: 8,
+    height: '55%',
+    width: '70%',
+    top: 70,
+    alignSelf: 'center',
+  },
+  exportText: {
+    fontSize: 20,
+    marginBottom: 20
+  },
+  exportClose: {
+    fontSize: 15,
+    marginBottom: 20
+  }, 
 });
