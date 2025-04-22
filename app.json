@@ -10,14 +10,31 @@
     "newArchEnabled": true,
     "ios": {
       "googleServicesFile": ".GoogleService-Info.plist",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ios.harmonizeApp",
+      "usesAppleMusic": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            },
+            "128.105.37.154": {
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
     },
     "android": {
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo-noBG.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.android.harmonizeApp"
     },
     "web": {
       "bundler": "metro",
@@ -38,6 +55,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a4d0c564-38bb-4ba4-ad0a-2fff74309108"
+      }
+    },
+    "owner": "jdporter2"
   }
 }

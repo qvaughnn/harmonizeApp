@@ -9,6 +9,14 @@ import { DataSnapshot } from 'firebase/database';
 import { useAuth } from "../contexts/AuthContext";
 import { app, database } from "./config/firebase";
 import { useRouter } from 'expo-router';
+import { useMusicService } from '../contexts/MusicServiceContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+//import { WebView } from 'react-native-webview';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+
+
+
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
@@ -73,7 +81,12 @@ export default function HomeScreen() {
   const [token, setLocalToken] = useState<string | null>(null);
   const { setToken, setSpotifyUserId } = useAuth();
   const router = useRouter();
+  const { setMusicService } = useMusicService();
+  const { musicService } = useMusicService();
 
+
+
+ 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: CLIENT_ID,
@@ -89,11 +102,42 @@ export default function HomeScreen() {
     if (response?.type === 'success') {
       exchangeCodeForToken(response.params.code);
     }
-  }, [response]);
+    if (musicService === 'AppleMusic') {
+      exchangeCodeForToken();
+    }
+  }, [response, musicService]);
 
   // Exchange code for token and store user data in Firebase
   const exchangeCodeForToken = async (code: string) => {
+    console.log("exchangeCodeForToken CALLED — musicService:", musicService);
     try {
+      if (musicService === 'AppleMusic') {
+        const appleUserId = "APPLES";
+        console.log("appleUserID: ", appleUserId);
+
+      // Firebase anonymous login
+      let firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        const userCredential = await signInAnonymously(auth);
+        firebaseUser = userCredential.user;
+        console.log("Signed in Firebase user:", firebaseUser.uid);
+      }
+
+      // Set the Apple ID in context
+        setSpotifyUserId(appleUserId); 
+
+      // Save dummy data in Firebase
+        const userRef = ref(database, `users/${appleUserId}/AppleMusic`);
+        await set(userRef, {
+          createdAt: Date.now(),
+          userType: "AppleMusic",
+        });
+
+        return;
+      } else {
+
+     
+
       if (!request?.codeVerifier) {
         console.error("Missing code verifier!");
         return;
@@ -150,6 +194,7 @@ export default function HomeScreen() {
         console.log("Signed in Firebase user:", firebaseUser.uid);
       }
 
+
       // check if Spotify user exists
       let userCode = null
       try {
@@ -186,7 +231,7 @@ export default function HomeScreen() {
       });
       console.log("User logged in:", userCode)
       console.log("User data stored in Firebase:", userProfile);
-    } catch (error) {
+    }} catch (error) {
       console.error("Token exchange error:", error);
     }
 
@@ -222,6 +267,39 @@ export default function HomeScreen() {
     }
   };
 
+
+  useEffect(() => {
+  const sub = Linking.addEventListener('url', ({ url }) => {
+    const { queryParams } = Linking.parse(url);
+    const token = queryParams.token;
+    console.log("Received Apple Music token:", token);
+    // Save to context or Firebase, navigate to next screen, etc.
+  });
+
+  return () => sub.remove();
+}, []);
+
+
+  const handleAppleMusicLogin = async () => {
+  const result = await WebBrowser.openAuthSessionAsync(
+    'https://tangerine-scone-fefb23.netlify.app',
+    'myapp://auth'
+  );
+
+
+ // console.log("Redirect Test Result:", result);
+
+  if (result.type === 'success' && result.url.includes('token=')) {
+    const userToken = decodeURIComponent(result.url.split('token=')[1]);
+    console.log(' Apple Music User Token:', userToken); 
+    setMusicService('AppleMusic'); //Delete later
+    router.replace('/playlistImport');
+    // Proceed with Firebase, etc.
+  } else {
+    console.log(' Auth cancelled or failed:', result);
+  }
+};
+
   return (
     <ThemedView style={styles.overall}>
       <Image
@@ -240,7 +318,8 @@ export default function HomeScreen() {
         icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>}
         style={styles.appleButton}
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}>
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}
+        onPress={handleAppleMusicLogin}>
         LOG IN WITH APPLE MUSIC
       </Button>
     </ThemedView>

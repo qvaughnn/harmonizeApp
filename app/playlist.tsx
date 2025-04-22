@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 import { app, database } from "./config/firebase";
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { useMusicService } from '../contexts/MusicServiceContext';
+
 
 interface Playlist {
   name: string;
@@ -112,6 +114,12 @@ export default function PlaylistScreen() {
   const { token } = useAuth();
   const { id: playlistId } = useLocalSearchParams();
 
+  const { musicService } = useMusicService();
+
+  console.log('Received route playlistID:', { playlistId });
+  console.log('🎧 Music Service in PlaylistScreen:', musicService);
+
+
   const [playlist, setPlaylist] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -123,21 +131,71 @@ export default function PlaylistScreen() {
     if (playlistId && token) {
       fetchPlaylistData(playlistId as string);
     }
+    if (playlistId && (musicService === 'AppleMusic')){
+      fetchPlaylistData(playlistId as string);
+    }
   }, [playlistId, token]);
 
   const fetchPlaylistData = async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`https://api.spotify.com/v1/playlists/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setPlaylist(data);
-      } else {
-        console.error('Error fetching playlist:', data);
+      if (musicService === 'AppleMusic') {
+        console.log('Fetching AppleMusic data');
+        const playlistRes = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${id}`, {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            "Music-User-Token": "AtQfI0H0emIFKjAFHiInF+dmB3DfER2qT+fz3CKCQbSYxsuSETT10Mjz2yh4UKTIIJPRXPced+W7dHC0I9FA9497Xly9fd6WcplgoABAE+fts+ZQMYw4NgnEXaMFNzOPMpGHfiVdKc2rDX6PLK3fyIwzq9WisJR3s67XPgI9LWJWMMMrYtFPh9iu4ONxLkNGK1tyihGM98+/Voa3obC4d7XueFgDw2QyZzk4NJ2E1ETF7q0z2A==",
+          },
+        });
+        const playlistMeta = await playlistRes.json();
+
+
+        const playlistName = playlistMeta?.data?.[0]?.attributes?.name ?? 'Unnamed Playlist';
+        const playlistArtwork = playlistMeta?.data?.[0]?.attributes?.artwork?.url?.replace('{w}x{h}', '400x400');
+
+  
+        const response = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${id}/tracks`, {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            "Music-User-Token": "AtQfI0H0emIFKjAFHiInF+dmB3DfER2qT+fz3CKCQbSYxsuSETT10Mjz2yh4UKTIIJPRXPced+W7dHC0I9FA9497Xly9fd6WcplgoABAE+fts+ZQMYw4NgnEXaMFNzOPMpGHfiVdKc2rDX6PLK3fyIwzq9WisJR3s67XPgI9LWJWMMMrYtFPh9iu4ONxLkNGK1tyihGM98+/Voa3obC4d7XueFgDw2QyZzk4NJ2E1ETF7q0z2A==",
+          },
+        });
+        const data = await response.json();
+
+        console.log('Received data: ', data);
+        console.log('Received meta: ', playlistMeta);
+
+
+        if (response.ok) {
+          const tracks = data.data.map((song: any) => {
+            const attr = song.attributes;
+            return {
+              id: song.id,
+              name: attr.name,
+              artist: attr.artistName,
+              image: attr.artwork?.url?.replace('{w}x{h}', '200x200'),
+            };
+          });
+
+          setPlaylist({
+            name: playlistName,
+            images: playlistArtwork ? [{ url: playlistArtwork }] : [],
+            tracks: { items: tracks },
+          });
+        }
+
+      } else{
+        const response = await fetch(`https://api.spotify.com/v1/playlists/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setPlaylist(data);
+        } else {
+          console.error('Error fetching playlist:', data);
+        }
       }
     } catch (error) {
       console.error('Playlist fetch error:', error);
@@ -147,19 +205,21 @@ export default function PlaylistScreen() {
   };
 
   const renderTrackItem = ({ item }: { item: any }) => {
-    const track = item.track;
+    //const track = item.track;
+    //if (!track) return null;
+    const track = musicService === 'AppleMusic' ? item : item.track;
     if (!track) return null;
 
     return (
       <View style={styles.trackItem}>
         <Image
-          source={{ uri: track.album.images?.[0]?.url }}
+          source={{ uri: musicService === 'AppleMusic' ? track.image : track.album.images?.[0]?.url }}
           style={styles.trackImage}
         />
         <View style={styles.trackInfo}>
           <Text style={styles.trackName}>{track.name}</Text>
           <Text style={styles.trackArtist}>
-            {track.artists?.map((artist: any) => artist.name).join(', ')}
+            {musicService === 'AppleMusic' ? track.artist : track.artists?.map((artist: any) => artist.name).join(', ')}
           </Text>
         </View>
       </View>
@@ -218,7 +278,11 @@ export default function PlaylistScreen() {
       <FlatList
         data={playlist.tracks?.items || []}
         renderItem={renderTrackItem}
-        keyExtractor={(item, index) => item.track?.id || String(index)}
+        keyExtractor={(item, index) =>
+          musicService === 'AppleMusic'
+            ? `${item.id}_${index}`
+            : item.track?.id || String(index)
+        }
         contentContainerStyle={styles.trackList}
       />
 

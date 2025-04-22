@@ -3,16 +3,24 @@ import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Avatar} from 'react-native-paper';
 import { useState, useEffect, useContext } from 'react';
 import { useAuth } from '../contexts/AuthContext'; 
+import { useMusicService } from '../contexts/MusicServiceContext';
+import { useRouter } from 'expo-router';
 
 const Profile = () => {
   const { token, setToken } = useAuth(); 
   const [userData, setUserData] = useState<any>(null);
+  const { musicService } = useMusicService();
+  const { setMusicService } = useMusicService();
+  const router = useRouter();
+
 
   useEffect(() => {
     if (token) {
-      fetchUserProfile();
+      fetchSpotifyProfile();
+    } else if (musicService === 'AppleMusic') {
+      fetchAppleMusicProfile();
     }
-  }, [token]);
+  }, [token, musicService]);
 
   const fetchUserProfile = async () => {
     console.log("fetchUserProfile() called");
@@ -37,6 +45,18 @@ const Profile = () => {
     }
   };
 
+  const fetchAppleMusicProfile = async () => {
+    try {
+      // Cannot access userData without MusicKit integration, placeholder for now
+      setUserData({
+        display_name: "AppleUser",
+        images: ['../assets/images/appleLogo.png'],
+      });
+    } catch (error) {
+      console.error("Apple Music profile fetch error:", error);
+    }
+  };
+  
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
@@ -53,7 +73,13 @@ const Profile = () => {
         icon="close"
         style={styles.logOutButton}
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}>
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}
+        onPress={() => {
+          setToken(null); // Clear auth token
+          setMusicService('Spotify'); // Reset music service
+          router.replace('/'); // Navigate to login screen
+        }}
+      >
           Log Out
       </Button>
     </ThemedView>

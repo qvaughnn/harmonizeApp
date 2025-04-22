@@ -6,6 +6,9 @@ import { FlatList } from 'react-native-gesture-handler';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { useAuth } from "../../contexts/AuthContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useMusicService } from '../../contexts/MusicServiceContext';
+import { app, database } from "../config/firebase";
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
 
 type SpotifyItem = {
   id: string;
@@ -18,6 +21,65 @@ type SpotifyItem = {
   };
 };
 
+// creates a new playlist with the given name, author, and image and returns the key of the new playlist
+async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
+  const playlistsRef = ref(database, "playlists");
+
+  // generates unique id for playlist
+  const newPlaylistRef = push(playlistsRef);
+
+  const playlistData = {
+    name: name,
+    author: author,
+    image: image,
+    // can add more fields later
+  }
+
+  console.log("reference key", newPlaylistRef.key);
+
+  // Set the playlist data at the new location
+  set(newPlaylistRef, playlistData)
+    .then(() => {
+      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding playlist: ", error);
+    });
+
+  return newPlaylistRef.key;
+}
+
+// adds song to given playlist, only takes spotify id for now
+async function addSong(playlistRef: string, spotifyId: string, musicService : 'Spotify' | 'AppleMusic') {
+  let songsRef;
+
+  if (musicService !== 'AppleMusic') {
+    songsRef = ref(database, `playlists/${playlistRef}/songs/spotify`)
+  } else {
+    songsRef = ref(database, `playlists/${playlistRef}/songs/apple`)
+  }
+  
+  console.log("Playlist Ref: ", playlistRef);
+
+  // generates unique id for song
+  const newSongRef = push(songsRef);
+
+  const songData = {
+    spotifyId: spotifyId, 
+    // can add more data if we want later
+  }
+
+  // Set the playlist data at the new location
+  set(newSongRef, songData)
+    .then(() => {
+      console.log("Song added successfully with ID: ", newSongRef.key);
+    })
+    .catch((error) => {
+      console.error("Error adding song: ", error);
+    });
+}
+
+
 export default function TabTwoScreen() {
  const [searchQuery, setSearchQuery] = React.useState('');
  const [results, setResults] = React.useState<SpotifyItem[]>([]);
@@ -27,13 +89,13 @@ export default function TabTwoScreen() {
  const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
  const [newPlaylistModalVisible, setNewPlaylistModalVisible] = React.useState(false);
  const [playlistName, setPlaylistName] = React.useState('');
-
+ const { musicService } = useMusicService();
 
  async function handleSearchQueryChange(query: string){
    setSearchQuery(query);
 
    if (query.length > 2) { //makes sure we have a long enough request
-    if (!token) { //checks that we have authorization to request a search
+    if (!token && (musicService !== 'AppleMusic')) { //checks that we have authorization to request a search
       console.error("Token is missing!");
       return;
     }
@@ -45,41 +107,80 @@ export default function TabTwoScreen() {
  async function getResults(query: string) {
   try {
     setLoading(true);
-    const response = await fetch(
+
+    if (musicService !== 'AppleMusic') {
+      const response = await fetch(
       
       // `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=2`
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`, // Use the context token for request
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`, // Use the context token for request
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
     // Check if the response is OK (status code 200)
-    if (!response.ok) {
-      const errorText = await response.text(); // Read the raw response text
-      console.error("Spotify Search Error: Non-200 Response", response.status, errorText);
-      return;
-    }
+      if (!response.ok) {
+        const errorText = await response.text(); // Read the raw response text
+        console.error("Spotify Search Error: Non-200 Response", response.status, errorText);
+        return;
+      }
 
     // Attempt to parse JSON only if the response is successful
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.error) {
-      console.error("Spotify Search API Error:", data.error);
-      return;
+      if (data.error) {
+        console.error("Spotify Search API Error:", data.error);
+        return;
+      }
+
+      const results = [
+        ...(data.tracks?.items || []),
+        ...(data.artists?.items || []),
+        ...(data.albums?.items || []),
+      ];
+      console.log(results);
+      setResults(results);
+    } else {
+      const response = await fetch(
+        `https://api.music.apple.com/v1/catalog/us/search?term=${encodeURIComponent(query)}&types=songs,albums,artists&limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Apple Music Search Error:", response.status, errorText);
+        return;
+      }
+
+      const data = await response.json();
+      const songs = data.results?.songs?.data || [];
+      const albums = data.results?.albums?.data || [];
+      const artists = data.results?.artists?.data || [];
+
+      const normalizedResults = [...songs, ...albums, ...artists].map((item: any) => ({
+        id: item.id,
+        name: item.attributes?.name || 'Unknown',
+        type: item.type,
+        artists: item.attributes?.artistName ? [{ name: item.attributes.artistName }] : [],
+        images: item.attributes?.artwork?.url
+          ? [{ url: item.attributes.artwork.url.replace('{w}x{h}', '200x200') }]
+          : [],
+        album: item.attributes?.artwork?.url
+          ? { images: [{ url: item.attributes.artwork.url.replace('{w}x{h}', '200x200') }] }
+          : undefined,
+      }));
+
+      setResults(normalizedResults);
     }
 
-    const results = [
-      ...(data.tracks?.items || []),
-      ...(data.artists?.items || []),
-      ...(data.albums?.items || []),
-    ];
-    console.log(results);
-    setResults(results);
   } catch (error) {
     console.error("Error fetching Spotify search:", error);
   } finally {
@@ -87,6 +188,65 @@ export default function TabTwoScreen() {
   }
 }
 
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedSong(null);
+  };
+
+  const openNewPlaylistModal = () => {
+    setModalVisible(false);
+    setNewPlaylistModalVisible(true);
+  };
+
+  const closeNewPlaylistModal = () => {
+    setNewPlaylistModalVisible(false);
+    setPlaylistName(''); // Reset the input field
+  };
+
+
+  const addNewPlaylist = async() => {
+    console.log("Creating new playlist with name: ", playlistName);
+    try{
+      const newKey = await createPlaylist(playlistName, "authorID", "imageURL");
+      if (newKey !== null){
+        await onPlaylistClicked(newKey);
+      }
+    } catch(error){
+      console.error("Error creating playlist:", error);   
+    } finally {
+      closeNewPlaylistModal(); // Close the modal after creating the playlist
+    }  
+  };
+  const onPlaylistClicked = async (playlistKey: string) => {
+    try{
+      if (selectedSong && playlistKey){
+        await addSong(playlistKey, selectedSong.id, musicService);
+      } 
+    } catch(error){
+      console.error("Error adding song to playlist:", error);   
+    } finally{
+      setModalVisible(false);
+      setSelectedSong(null);
+    }
+  };
+
+    // handles adding a song to a playlist
+    const handleAddSong = async (item: SpotifyItem) => {
+      setSelectedSong(item);
+      // try{
+      //   const key = await createPlaylist(item.name, "authorID", "imageURL");
+      //   console.log("Key: ", key);
+      //   if (key !== null){
+      //     await addSong(key, item.id);
+      //   }
+      // } catch(error){
+      //   console.error("Error adding song to playlist:", error);   
+      // }
+      setModalVisible(true);
+    };
+
+/*
   const handleAdd = (item : SpotifyItem) => {
     console.log("Adding song: $(item.name) by ")
 
@@ -120,6 +280,8 @@ export default function TabTwoScreen() {
     // You can handle the logic to create the playlist here
     closeNewPlaylistModal(); // Close the modal after creating the playlist
   };
+
+*/
 
 
  return (

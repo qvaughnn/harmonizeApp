@@ -8,6 +8,8 @@ import { FlatList } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { app, database } from "../config/firebase";
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { useMusicService } from '../../contexts/MusicServiceContext';
+
 
 type SpotifyItem = {
   id: string;
@@ -22,7 +24,12 @@ const AllPlaylists = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SpotifyItem[]>([]);
   const [filteredResults, setFilteredResults] = useState<SpotifyItem[]>([]);
+  const { musicService } = useMusicService();
 
+
+  useEffect(() => {
+    console.log('musicService changed to:', musicService);
+  }, [musicService]);  
   
   function handleSearchQueryChange(query: string): void {
     setSearchQuery(query);
@@ -68,41 +75,82 @@ async function createPlaylist(name: string, author: string, image: string): Prom
     if (token) {
       fetchPlaylists();
     }
-  }, [token]);
+    if (musicService === 'AppleMusic'){
+      fetchPlaylists();
+    }
+  }, [token, musicService]);
 
   const fetchPlaylists = async () => {
     try {
-      const response = await fetch("https://api.spotify.com/v1/me/playlists", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        const playlistsData = data.items || [];
-        const fetchedPlaylists = playlistsData.map((playlist: any) => {
-          if (playlist.name && playlist.images && playlist.images.length > 0) {
+      if (musicService === 'AppleMusic'){  //Fetches user playlists if musicService is set to AppleMusic
+        console.log("Using music service:", musicService);
+        const response = await fetch("https://api.music.apple.com/v1/me/library/playlists", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            "Music-User-Token": "AtQfI0H0emIFKjAFHiInF+dmB3DfER2qT+fz3CKCQbSYxsuSETT10Mjz2yh4UKTIIJPRXPced+W7dHC0I9FA9497Xly9fd6WcplgoABAE+fts+ZQMYw4NgnEXaMFNzOPMpGHfiVdKc2rDX6PLK3fyIwzq9WisJR3s67XPgI9LWJWMMMrYtFPh9iu4ONxLkNGK1tyihGM98+/Voa3obC4d7XueFgDw2QyZzk4NJ2E1ETF7q0z2A==",
+            "Content-Type": "application/json",
+            },
+          });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const playlistsData = data.data || [];
+          const fetchedPlaylists = playlistsData.map((playlist: any) => {
+            const attributes = playlist.attributes || {};
             return {
               id: playlist.id,
-              name: playlist.name,
-              uri: playlist.images[0].url,
+              name: attributes.name,
+              uri: attributes.artwork?.url
+                ? attributes.artwork.url.replace('{w}x{h}', '200x200')
+                : require('../../assets/images/coverSample.png'),
             };
-          } else {
-            return {
-              id: playlist.id,
-              name: playlist.name,
-              uri: require('../../assets/images/coverSample.png'),
-            };
-          }
+          });
+
+
+          setResults(fetchedPlaylists);
+          setFilteredResults(fetchedPlaylists);
+        }
+        else{
+          console.error("AppleMusic API error:", data);
+        }
+
+      }
+      else{   //Fetches user playlists if musicService is not AppleMusic
+     
+        const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
-        setResults(fetchedPlaylists);
-        setFilteredResults(fetchedPlaylists);
-      } else {
-        console.error("Error fetching playlists:", data);
+  
+        const data = await response.json();
+  
+        if (response.ok) {
+          const playlistsData = data.items || [];
+          const fetchedPlaylists = playlistsData.map((playlist: any) => {
+            if (playlist.name && playlist.images && playlist.images.length > 0) {
+              return {
+                id: playlist.id,
+                name: playlist.name,
+                uri: playlist.images[0].url,
+              };
+            } else {
+              return {
+                id: playlist.id,
+                name: playlist.name,
+                uri: require('../../assets/images/coverSample.png'),
+              };
+            }
+          });
+          setResults(fetchedPlaylists);
+          setFilteredResults(fetchedPlaylists);
+        } else {
+          console.error("Error fetching playlists:", data);
+        }
       }
     } catch (error) {
       console.error("Playlists fetch error:", error);

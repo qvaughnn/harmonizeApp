@@ -5,19 +5,23 @@ import Carousel from 'react-native-snap-carousel-v4';
 import { useAuth } from '../../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect } from 'react';
-
+import { useMusicService } from '../../contexts/MusicServiceContext';
 const { width } = Dimensions.get('window');
 
 export default function Home() {
   const router = useRouter();
   const { token } = useAuth(); 
   const [images, setImages] = useState<{ id: string; uri: string }[]>([]);
+  const { musicService } = useMusicService();
 
   useEffect(() => {
     if (token) {
       fetchPlaylists();
     }
-  }, [token]);
+    if (musicService === 'AppleMusic'){
+      fetchPlaylists();
+    }
+  }, [token, musicService]);
 
   const friends = [
     {name: 'Alice', playlists: 4, avatar:require('../../assets/images/avatar.png')},
@@ -27,6 +31,74 @@ export default function Home() {
 
   const fetchPlaylists = async () => {
     try {
+      if (musicService === 'AppleMusic'){  //Fetches user playlists if musicService is set to AppleMusic
+        console.log("Using music service:", musicService);
+        const response = await fetch("https://api.music.apple.com/v1/me/library/playlists", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            "Music-User-Token": "AtQfI0H0emIFKjAFHiInF+dmB3DfER2qT+fz3CKCQbSYxsuSETT10Mjz2yh4UKTIIJPRXPced+W7dHC0I9FA9497Xly9fd6WcplgoABAE+fts+ZQMYw4NgnEXaMFNzOPMpGHfiVdKc2rDX6PLK3fyIwzq9WisJR3s67XPgI9LWJWMMMrYtFPh9iu4ONxLkNGK1tyihGM98+/Voa3obC4d7XueFgDw2QyZzk4NJ2E1ETF7q0z2A==",
+            "Content-Type": "application/json",
+            },
+          });
+
+        const data = await response.json();
+
+
+        if (response.ok) {
+          const playlistsData = data.data || [];
+          const fetchedImages = playlistsData.map((playlist: any) => {
+            const attributes = playlist.attributes || {};
+            return {
+              id: playlist.id,
+              uri: attributes.artwork?.url
+                ? attributes.artwork.url.replace('{w}x{h}', '200x200')
+                : require('../../assets/images/coverSample.png'),
+            };
+          });
+
+
+
+          setImages(fetchedImages);
+//          setFilteredResults(fetchedPlaylists);
+        }
+        else{
+          console.error("AppleMusic API error:", data);
+        }
+
+      }
+      else{   //Fetches user playlists if musicService is not AppleMusic
+
+        const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const playlistsData = data.items || [];
+          const fetchedImages = playlistsData.map((playlist: any) => ({
+            id: playlist.id,
+            uri:
+              playlist.images && playlist.images.length > 0
+                ? playlist.images[0].url
+                : require('../../assets/images/coverSample.png'),
+          }));
+          setImages(fetchedImages);
+//          setFilteredResults(fetchedPlaylists);
+        } else {
+          console.error("Error fetching cover art:", data);
+        }
+      }
+    } catch (error) {
+      console.error("Playlists fetch error:", error);
+    }
+  };
+/*    try {
       const response = await fetch('https://api.spotify.com/v1/me/playlists', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -46,11 +118,10 @@ export default function Home() {
         setImages(fetchedImages);
       } else {
         console.error('Error fetching playlists:', data);
-      }
-    } catch (error) {
       console.error('Playlists fetch error:', error);
     }
   };
+*/
 
   // Navigate to /playlist screen, passing the playlistId
   const handlePlaylistPress = (playlistId: string) => {
