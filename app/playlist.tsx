@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Image, FlatList, Pressable } from 'react-native';
-import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List } from 'react-native-paper';
+import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List, Icon } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
@@ -34,6 +34,12 @@ export default function PlaylistScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Confirm remove song modal state
+  const [confirmRemoveVisible, setConfirmRemoveVisible] = useState(false);
+  const [selectedSongToRemove, setSelectedSongToRemove] = useState<Song | null>(null);
+
+  const [editMode, setEditMode] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
 
   
@@ -122,6 +128,10 @@ export default function PlaylistScreen() {
     setSearchResults([]);
   };
 
+  const removeSong = async (songToRemove: Song) => {
+  }
+  
+
   // const renderTrackItem = ({ item }: { item: any }) => {
   //   const track = item.track;
   //   if (!track) return null;
@@ -204,10 +214,39 @@ export default function PlaylistScreen() {
                 <Text style={styles.description}>{playlist.description}</Text>
               ) : null} 
 
-            <Pressable onPress={() => setExportVisible(true)}>
-              <Text style={styles.export}>Export</Text>
-            </Pressable>
+          <View style={styles.exportEditContainer}>
+            {/* <Pressable onPress={() => router.push('/friends')}> */}
+              {/* <Text style={styles.export}>Export</Text> */}
+              <IconButton
+                icon="export-variant"
+                size={28}
+                onPress={()=>setExportVisible(true)}
+                iconColor="white"
+              />
+            {/* </Pressable> */}
+
+            {/* Add Collaborator Button */}
+            <IconButton
+            icon="account-multiple-plus"
+            size={28}
+            onPress={() => {
+              // Open add collaborator modal or screen
+              console.log('Add collaborator pressed');
+            }}
+            iconColor="white"
+          />
+
+            {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
+              {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
+              <IconButton
+                icon ="pencil"
+                onPress={()=>setEditMode(prev => !prev)}
+                size={28}
+                iconColor="white"
+              />
+            {/* </Pressable> */}
             </View>
+          </View>
           </View>
         </View>
           
@@ -221,30 +260,40 @@ export default function PlaylistScreen() {
                   <Text style={styles.trackName}>{item.name}</Text>
                   <Text style={styles.trackArtist}>{item.artist}</Text>
                 </View>
+                {editMode && (
+                <IconButton
+                  icon="minus-circle"
+                  size={24}
+                  onPress={() => {
+                    setSelectedSongToRemove(item);
+                    setConfirmRemoveVisible(true);
+                  }}
+                  iconColor="white"
+                />
+                )}
               </View>
             )}
           />
-      {/* Export Modal */}
-      <Modal visible={exportVisible} onDismiss={() => setExportVisible(false)}>
-        <View style={styles.exportContent}>
-          <Pressable>
-            <Text style={styles.exportText}>
-              Export to Spotify
-            </Text>
-          </Pressable>
-          <Pressable>
-            <Text style={styles.exportText}>
-              Export to Apple Music
-            </Text>
-          </Pressable>
-          <Pressable onPress={() => setExportVisible(false)}>
-            <Text style={styles.exportClose}>
-              Cancel
-            </Text>
-          </Pressable>
-        </View>
-      </Modal>
-
+     {/* Export Modal */}
+     <Modal visible={exportVisible} onDismiss={() => setExportVisible(false)}>
+       <View style={styles.exportContent}>
+         <Pressable>
+           <Text style={styles.exportText}>
+             Export to Spotify
+           </Text>
+         </Pressable>
+         <Pressable>
+           <Text style={styles.exportText}>
+             Export to Apple Music
+           </Text>
+         </Pressable>
+         <Pressable onPress={() => setExportVisible(false)}>
+           <Text style={styles.exportClose}>
+             Cancel
+           </Text>
+         </Pressable>
+       </View>
+     </Modal>
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
         icon="pencil-circle"
@@ -298,6 +347,23 @@ export default function PlaylistScreen() {
           
         </View>
       </Modal>
+      <Modal visible={confirmRemoveVisible} onDismiss={() => setConfirmRemoveVisible(false)}>
+        <ThemedView style={styles.confirmModal}>
+          <Text style={styles.confirmText}>
+            Are you sure you want to remove{' '}
+            <Text style={{ fontWeight: 'bold', color:'white'}}>{selectedSongToRemove?.name}</Text>?
+          </Text>
+          <View style={styles.buttonContainer}>
+            <Pressable style={styles.confirmButton} >
+               <Text style={styles.confirmButtonText}>Yes</Text> 
+            </Pressable>
+            <Pressable style={styles.cancelButton} onPress={() => setConfirmRemoveVisible(false)}>
+               <Text style={styles.cancelButtonText}>Cancel</Text> 
+            </Pressable>
+          </View>
+        </ThemedView>
+      </Modal>
+
     </ThemedView>
   );
 }
@@ -337,23 +403,25 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 5,
     marginVertical: 12,
-    resizeMode: 'cover'
+    resizeMode: 'contain'
   },
   owner: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 10,
+    textAlign: 'center',
   },
   description: {
     color: 'white',
     fontSize: 14,
     fontWeight: 'regular',
     marginBottom: 20,
+    textAlign: 'center',
   },
   export: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'regular',
     marginBottom: 20,
   },
@@ -418,16 +486,68 @@ const styles = StyleSheet.create({
     borderRadius: 4, 
     marginRight: 8 
   },
-  exportText: {
-    fontSize: 20,
-    marginBottom: 20
+  confirmModal: {
+    padding: 30,
+    margin: 40,
+    borderRadius: 10,
+    alignItems: 'center',
   },
-  exportClose: {
-    fontSize: 15,
-    marginBottom: 20
+  confirmText: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: 'white',
   },
-  exportContent: { 
-    backgroundColor: 'white', 
+  buttonContainer:{
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    width: '100%',
+    marginTop: 10,
+  },
+  confirmButton: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    color: 'black',
+    fontSize: 16,
+  },
+  
+  cancelButtonText: {
+    color: 'black',
+    fontSize: 16,
+  },
+  exportEditContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 10,
+  },
+
+  
+  edit: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'regular',
+    marginLeft: 20,
+  },
+  exportContent: {
+    backgroundColor: 'white',
     padding: 20,
     margin: 10,
     borderRadius: 8,
@@ -436,4 +556,12 @@ const styles = StyleSheet.create({
     top: 70,
     alignSelf: 'center',
   },
+  exportText: {
+    fontSize: 20,
+    marginBottom: 20
+  },
+  exportClose: {
+    fontSize: 15,
+    marginBottom: 20
+  }, 
 });
