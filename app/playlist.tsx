@@ -34,6 +34,7 @@ export default function PlaylistScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
 
   
   // Load Playlist from Firebase
@@ -203,7 +204,7 @@ export default function PlaylistScreen() {
                 <Text style={styles.description}>{playlist.description}</Text>
               ) : null} 
 
-            <Pressable onPress={() => router.push('/friends')}>
+            <Pressable onPress={() => setExportVisible(true)}>
               <Text style={styles.export}>Export</Text>
             </Pressable>
             </View>
@@ -223,6 +224,27 @@ export default function PlaylistScreen() {
               </View>
             )}
           />
+      {/* Export Modal */}
+      <Modal visible={exportVisible} onDismiss={() => setExportVisible(false)}>
+        <View style={styles.exportContent}>
+          <Pressable>
+            <Text style={styles.exportText}>
+              Export to Spotify
+            </Text>
+          </Pressable>
+          <Pressable>
+            <Text style={styles.exportText}>
+              Export to Apple Music
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => setExportVisible(false)}>
+            <Text style={styles.exportClose}>
+              Cancel
+            </Text>
+          </Pressable>
+        </View>
+      </Modal>
+
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
         icon="pencil-circle"
@@ -395,5 +417,23 @@ const styles = StyleSheet.create({
     height: 40, 
     borderRadius: 4, 
     marginRight: 8 
+  },
+  exportText: {
+    fontSize: 20,
+    marginBottom: 20
+  },
+  exportClose: {
+    fontSize: 15,
+    marginBottom: 20
+  },
+  exportContent: { 
+    backgroundColor: 'white', 
+    padding: 20,
+    margin: 10,
+    borderRadius: 8,
+    height: '55%',
+    width: '70%',
+    top: 70,
+    alignSelf: 'center',
   },
 });
