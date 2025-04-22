@@ -6,22 +6,35 @@ import { app, database } from "../config/firebase";
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
 
 // returns true if successful and false if not
-async function addFriend(currentUser: string, friend: string): Promise<boolean> {
+async function addFriend(currentUser: string, targetUser: string): Promise<boolean> {
   try {
-    const friendRef = ref(database, `users/${currentUser}/friends/${friend}`);
-    await set(friendRef, true);
+    const sentRef = ref(database, `friend_requests/${currentUser}/sent/${targetUser}`);
+    const receivedRef = ref(database, `friend_requests/${targetUser}/received/${currentUser}`);
+
+    // Send request from currentUser to targetUser
+    await Promise.all([
+      set(sentRef, true),
+      set(receivedRef, true)
+    ]);
+
     return true;
   } catch (error) {
-    console.error("Error adding friend:", error);
+    console.error("Error sending friend request:", error);
     return false;
   }
 }
 
 // returns true if successful and false if not
-async function removeFriend(currentUser: string, friend: string): Promise<boolean> {
+async function removeFriend(currentUser: string, targetUser: string): Promise<boolean> {
   try {
-    const friendRef = ref(database, `users/${currentUser}/friends/${friend}`);
-    await remove(friendRef);
+    const userFriendRef = ref(database, `friends/${currentUser}/${targetUser}`);
+    const friendUserRef = ref(database, `friends/${targetUser}/${currentUser}`);
+
+    await Promise.all([
+      remove(userFriendRef),
+      remove(friendUserRef)
+    ]);
+
     return true;
   } catch (error) {
     console.error("Error removing friend:", error);
@@ -29,24 +42,100 @@ async function removeFriend(currentUser: string, friend: string): Promise<boolea
   }
 }
 
-// returns true if friend is a friend of currentUser and false if not or if there's an error
-// NOTE: BOTH USERS MUST HAVE FRIENDED EACH OTHER FOR FRIENDSHIP TO BE RECOGNIZED
-async function isMutualFriend(currentUser: string, friend: string): Promise<boolean> {
+async function cancelFriendRequest(currentUser: string, targetUser: string): Promise<boolean> {
   try {
-    // check if currentUser has friended friend
-    const friendRef1 = ref(database, `users/${currentUser}/friends/${friend}`);
-    const snapshot1 = await get(friendRef1);
-    const isCurrentUserFriend = snapshot1.exists();
+    const sentRef = ref(database, `friend_requests/${currentUser}/sent/${targetUser}`);
+    const receivedRef = ref(database, `friend_requests/${targetUser}/received/${currentUser}`);
 
-    // check if friend has friended currentUser
-    const friendRef2 = ref(database, `users/${friend}/friends/${currentUser}`);
-    const snapshot2 = await get(friendRef2);
-    const isFriendUserFriend = snapshot2.exists();
+    await Promise.all([
+      remove(sentRef),
+      remove(receivedRef)
+    ]);
 
-    return isCurrentUserFriend && isFriendUserFriend;
+    return true;
   } catch (error) {
-    console.error("Error checking friendship:", error);
+    console.error("Error canceling friend request:", error);
     return false;
+  }
+}
+
+async function declineFriendRequest(currentUser: string, requester: string): Promise<boolean> {
+  try {
+    const receivedRef = ref(database, `friend_requests/${currentUser}/received/${requester}`);
+    const sentRef = ref(database, `friend_requests/${requester}/sent/${currentUser}`);
+
+    await Promise.all([
+      remove(receivedRef),
+      remove(sentRef)
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error("Error declining friend request:", error);
+    return false;
+  }
+}
+
+async function acceptFriendRequest(currentUser: string, requester: string): Promise<boolean> {
+  try {
+    // Create mutual friendship
+    const userFriendRef = ref(database, `friends/${currentUser}/${requester}`);
+    const requesterFriendRef = ref(database, `friends/${requester}/${currentUser}`);
+
+    // Delete friend request (both directions)
+    const receivedRef = ref(database, `friend_requests/${currentUser}/received/${requester}`);
+    const sentRef = ref(database, `friend_requests/${requester}/sent/${currentUser}`);
+
+    await Promise.all([
+      set(userFriendRef, true),
+      set(requesterFriendRef, true),
+      remove(receivedRef),
+      remove(sentRef)
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error("Error accepting friend request:", error);
+    return false;
+  }
+}
+
+async function getFriends(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await get(ref(database, `friends/${userId}`));
+    if (snapshot.exists()) {
+      return Object.keys(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting friends:", error);
+    return [];
+  }
+}
+
+async function getReceivedFriendRequests(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await get(ref(database, `friend_requests/${userId}/received`));
+    if (snapshot.exists()) {
+      return Object.keys(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting received friend requests:", error);
+    return [];
+  }
+}
+
+async function getSentFriendRequests(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await get(ref(database, `friend_requests/${userId}/sent`));
+    if (snapshot.exists()) {
+      return Object.keys(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting sent friend requests:", error);
+    return [];
   }
 }
 
