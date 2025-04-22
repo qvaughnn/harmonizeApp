@@ -218,6 +218,16 @@ export default function PlaylistScreen() {
               <Text style={styles.export}>Export</Text>
             </Pressable>
 
+            <IconButton
+            icon="account-multiple-plus"
+            size={28}
+            onPress={() => {
+              // Open add collaborator modal or screen
+              console.log('Add collaborator pressed');
+            }}
+            iconColor="white"
+          />
+
             <Pressable onPress={() => setEditMode(prev => !prev)}>
               <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text>
             </Pressable>
@@ -375,7 +385,7 @@ const styles = StyleSheet.create({
   },
   export: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'regular',
     marginBottom: 20,
   },
@@ -495,7 +505,7 @@ const styles = StyleSheet.create({
   
   edit: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'regular',
     marginLeft: 20,
   },
