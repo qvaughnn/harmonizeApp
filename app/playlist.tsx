@@ -104,7 +104,7 @@ export default function PlaylistScreen() {
   const selectTrack = async (track: SpotifyTrack) => {
     if (!playlistId || !currentUser || !playlist) return;
 
-    const isDuplicate = playlist.songs?.some(s => s.spotify_id === track.id);
+    const isDuplicate = playlist.songs?.some((s: Song) => s.spotify_id === track.id);
     if (isDuplicate) {
       console.log('Song already exists in playlist');
       return;
@@ -129,28 +129,12 @@ export default function PlaylistScreen() {
   };
 
   const removeSong = async (songToRemove: Song) => {
+    if (!playlistId || !currentUser || !playlist) return;
+
+    const updatedSongs = playlist.songs?.filter((s: Song) => s.spotify_id !== songToRemove.spotify_id);
+    await set(ref(database, `playlists/${playlistId}/songs`), updatedSongs);
+    setConfirmRemoveVisible(false);
   }
-  
-
-  // const renderTrackItem = ({ item }: { item: any }) => {
-  //   const track = item.track;
-  //   if (!track) return null;
-
-  //   return (
-  //     <View style={styles.trackItem}>
-  //       <Image
-  //         source={{ uri: track.album.images?.[0]?.url }}
-  //         style={styles.trackImage}
-  //       />
-  //       <View style={styles.trackInfo}>
-  //         <Text style={styles.trackName}>{track.name}</Text>
-  //         <Text style={styles.trackArtist}>
-  //           {track.artists?.map((artist: any) => artist.name).join(', ')}
-  //         </Text>
-  //       </View>
-  //     </View>
-  //   );
-  // };
 
   if (loading) {
     return (
@@ -354,7 +338,7 @@ export default function PlaylistScreen() {
             <Text style={{ fontWeight: 'bold', color:'white'}}>{selectedSongToRemove?.name}</Text>?
           </Text>
           <View style={styles.buttonContainer}>
-            <Pressable style={styles.confirmButton} >
+            <Pressable style={styles.confirmButton} onPress={() => selectedSongToRemove && removeSong(selectedSongToRemove)}>
                <Text style={styles.confirmButtonText}>Yes</Text> 
             </Pressable>
             <Pressable style={styles.cancelButton} onPress={() => setConfirmRemoveVisible(false)}>
@@ -473,11 +457,11 @@ const styles = StyleSheet.create({
     top: 70
   },
    searchbar: { 
-    marginBottom: 10,
+    marginBottom: -40,
     width: '90%'
   },
   closeinbar: {
-    top: -63,
+    top: -15,
     left: 285
   },
    thumbnail: { 
@@ -538,8 +522,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 10,
   },
-
-  
   edit: {
     color: 'white',
     fontSize: 16,
