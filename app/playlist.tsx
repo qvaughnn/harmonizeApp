@@ -39,6 +39,8 @@ export default function PlaylistScreen() {
   const [confirmRemoveVisible, setConfirmRemoveVisible] = useState(false);
   const [selectedSongToRemove, setSelectedSongToRemove] = useState<Song | null>(null);
 
+  const [editMode, setEditMode] = useState(false);
+
   
   // Load Playlist from Firebase
   useEffect(() => {
@@ -211,10 +213,16 @@ export default function PlaylistScreen() {
                 <Text style={styles.description}>{playlist.description}</Text>
               ) : null} 
 
+          <View style={styles.exportEditContainer}>
             <Pressable onPress={() => router.push('/friends')}>
               <Text style={styles.export}>Export</Text>
             </Pressable>
+
+            <Pressable onPress={() => setEditMode(prev => !prev)}>
+              <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text>
+            </Pressable>
             </View>
+          </View>
           </View>
         </View>
           
@@ -228,6 +236,7 @@ export default function PlaylistScreen() {
                   <Text style={styles.trackName}>{item.name}</Text>
                   <Text style={styles.trackArtist}>{item.artist}</Text>
                 </View>
+                {editMode && (
                 <IconButton
                   icon="minus-circle"
                   size={24}
@@ -237,6 +246,7 @@ export default function PlaylistScreen() {
                   }}
                   iconColor="white"
                 />
+                )}
               </View>
             )}
           />
@@ -475,5 +485,20 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 16,
   },
+  exportEditContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    width: '100%',
+    paddingHorizontal: 10,
+  },
+  
+  edit: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    marginLeft: 20,
+  },
+
   
 });
