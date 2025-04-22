@@ -1,425 +1,316 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, TouchableOpacity, Modal } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Image, Modal } from 'react-native';
+import { GestureHandlerRootView, FlatList } from 'react-native-gesture-handler';
+import { Searchbar, List, IconButton, Button, TextInput, Text, ActivityIndicator } from 'react-native-paper';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button, Searchbar, List, IconButton } from 'react-native-paper';
-import * as React from 'react';
-import { FlatList } from 'react-native-gesture-handler';
-import { getAuth, signInAnonymously } from "firebase/auth";
-import { useAuth } from "../../contexts/AuthContext";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { app, database } from "../config/firebase";
-import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { useAuth } from '../../contexts/AuthContext';
+import { database } from '../config/firebase';
+import { ref, onValue, set, push, get } from 'firebase/database';
+import { Playlist, PlaylistPreview, Song, UserRef } from '@/types';
 
-type SpotifyItem = {
+
+interface SearchItem {
   id: string;
   name: string;
-  type: string;
+  type: 'track' | 'album' | 'artist';
   artists?: { name: string }[];
+  album?: { images: { url: string }[]; name: string };
+  uri?: string;
+  duration_ms?: number;
   images?: { url: string }[];
-  album?: {
-    images: { url: string }[];
-  };
-};
-
-// creates a new playlist with the given name, author, and image and returns the key of the new playlist
-async function createPlaylist(name: string, author: string, image: string): Promise<string | null> {
-  const playlistsRef = ref(database, "playlists");
-
-  // generates unique id for playlist
-  const newPlaylistRef = push(playlistsRef);
-
-  const playlistData = {
-    name: name,
-    author: author,
-    image: image,
-    // can add more fields later
-  }
-
-  console.log("reference key", newPlaylistRef.key);
-
-  // Set the playlist data at the new location
-  set(newPlaylistRef, playlistData)
-    .then(() => {
-      console.log("Playlist added successfully with ID: ", newPlaylistRef.key);
-    })
-    .catch((error) => {
-      console.error("Error adding playlist: ", error);
-    });
-
-  return newPlaylistRef.key;
 }
 
-// adds song to given playlist, only takes spotify id for now
-async function addSong(playlistRef: string, spotifyId: string) {
-  const songsRef = ref(database, `playlists/${playlistRef}/songs/spotify`)
-  console.log("Playlist Ref: ", playlistRef);
+const placeholderCover = require('../../assets/images/coverSample.png');
 
-  // generates unique id for song
-  const newSongRef = push(songsRef);
+export default function SearchScreen() {
+  const { token, currentUser } = useAuth();
 
-  const songData = {
-    spotifyId: spotifyId, 
-    // can add more data if we want later
-  }
+  // search state
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Set the playlist data at the new location
-  set(newSongRef, songData)
-    .then(() => {
-      console.log("Song added successfully with ID: ", newSongRef.key);
-    })
-    .catch((error) => {
-      console.error("Error adding song: ", error);
-    });
-}
+  // playlist picker state
+  const [playlistModal, setPlaylistModal] = useState(false);
+  const [userPlaylists, setUserPlaylists] = useState<PlaylistPreview[]>([]);
+  const [selectedTrack, setSelectedTrack] = useState<SearchItem | null>(null);
 
-export default function TabTwoScreen() {
- const [searchQuery, setSearchQuery] = React.useState('');
- const [results, setResults] = React.useState<SpotifyItem[]>([]);
- const [loading, setLoading] = React.useState(false);
- const {token} = useAuth();
- const [modalVisible, setModalVisible] = React.useState(false);
- const[selectedSong, setSelectedSong] = React.useState<SpotifyItem | null>(null);
- const [newPlaylistModalVisible, setNewPlaylistModalVisible] = React.useState(false);
- const [playlistName, setPlaylistName] = React.useState('');
+  // new playlist modal
+  const [newModal, setNewModal] = useState(false);
+  const [newName, setNewName] = useState('');
 
-
- async function handleSearchQueryChange(query: string){
-   setSearchQuery(query);
-
-   if (query.length > 2) { //makes sure we have a long enough request
-    if (!token) { //checks that we have authorization to request a search
-      console.error("Token is missing!");
-      return;
-    }
-    getResults(query);
-  } else {
-    setResults([]); // Clear results
-  }
-}
- async function getResults(query: string) {
-  try {
-    setLoading(true);
-    const response = await fetch(
-      
-      // `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=2`
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`, // Use the context token for request
-          'Content-Type': 'application/json',
-        },
+  // Load user playlists
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const userRef = ref(database, `users/${currentUser.id}/userPlaylists`);
+    const unsub = onValue(userRef, async (snap) => {
+      if (!snap.exists()) { setUserPlaylists([]); return; }
+      const ids = Object.keys(snap.val());
+      const list: PlaylistPreview[] = [];
+      for (const id of ids) {
+        const data = await new Promise<any>((resolve) => onValue(ref(database, `playlists/${id}`), s => resolve(s.val()), { onlyOnce: true }));
+        if (data) list.push({ id: data.id, name: data.name, cover_art: data.cover_art || placeholderCover });
       }
-    );
+      setUserPlaylists(list);
+    });
+    return () => unsub();
+  }, [currentUser]);
 
-    // Check if the response is OK (status code 200)
-    if (!response.ok) {
-      const errorText = await response.text(); // Read the raw response text
-      console.error("Spotify Search Error: Non-200 Response", response.status, errorText);
-      return;
-    }
-
-    // Attempt to parse JSON only if the response is successful
-    const data = await response.json();
-
-    if (data.error) {
-      console.error("Spotify Search API Error:", data.error);
-      return;
-    }
-
-    const results = [
-      ...(data.tracks?.items || []),
-      ...(data.artists?.items || []),
-      ...(data.albums?.items || []),
-    ];
-    console.log(results);
-    setResults(results);
-  } catch (error) {
-    console.error("Error fetching Spotify search:", error);
-  } finally {
-    setLoading(false);
-  }
-}
-
-
-
-
-
-  const closeModal = () => {
-    setModalVisible(false);
-    setSelectedSong(null);
-  };
-
-  const openNewPlaylistModal = () => {
-    setModalVisible(false);
-    setNewPlaylistModalVisible(true);
-  };
-
-  const closeNewPlaylistModal = () => {
-    setNewPlaylistModalVisible(false);
-    setPlaylistName(''); // Reset the input field
-  };
-
-
-  const addNewPlaylist = async() => {
-    console.log("Creating new playlist with name: ", playlistName);
-    try{
-      const newKey = await createPlaylist(playlistName, "authorID", "imageURL");
-      if (newKey !== null){
-        await onPlaylistClicked(newKey);
-      }
-    } catch(error){
-      console.error("Error creating playlist:", error);   
-    } finally {
-      closeNewPlaylistModal(); // Close the modal after creating the playlist
-    }  
-  };
-  const onPlaylistClicked = async (playlistKey: string) => {
-    try{
-      if (selectedSong && playlistKey){
-        await addSong(playlistKey, selectedSong.id);
-      } 
-    } catch(error){
-      console.error("Error adding song to playlist:", error);   
-    } finally{
-      setModalVisible(false);
-      setSelectedSong(null);
-    }
-  };
-
-    // handles adding a song to a playlist
-    const handleAddSong = async (item: SpotifyItem) => {
-      setSelectedSong(item);
-      // try{
-      //   const key = await createPlaylist(item.name, "authorID", "imageURL");
-      //   console.log("Key: ", key);
-      //   if (key !== null){
-      //     await addSong(key, item.id);
-      //   }
-      // } catch(error){
-      //   console.error("Error adding song to playlist:", error);   
-      // }
-      setModalVisible(true);
+  // Spotify search
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!token || query.length < 3) { setResults([]); return; }
+      setLoading(true);
+      try {
+        const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const all: SearchItem[] = [
+            ...(data.tracks?.items || []).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              type: 'track',
+              artists: t.artists,
+              album: t.album,
+              uri: t.uri,
+              duration_ms: t.duration_ms,
+            })),
+            ...(data.albums?.items || []).map((a: any) => ({
+              id: a.id,
+              name: a.name,
+              type: 'album',
+              artists: a.artists,
+              images: a.images,
+            })),
+            ...(data.artists?.items || []).map((ar: any) => ({
+              id: ar.id,
+              name: ar.name,
+              type: 'artist',
+              images: ar.images,
+            })),
+          ];
+          setResults(all);
+        } else {
+          console.error('Search error', data);
+        }
+      } catch (e) {
+        console.error('Search fetch error', e);
+      } finally { setLoading(false); }
     };
+    const t = setTimeout(fetchData, 300);
+    return () => clearTimeout(t);
+  }, [query, token]);
 
+  const openPicker = (item: SearchItem) => {
+    if (item.type !== 'track') return;
+    setSelectedTrack(item);
+    setPlaylistModal(true);
+  };
 
- return (
-   <ThemedView style={styles.overall}>
-     <Text variant="displayMedium" style={styles.title}>
-       SEARCH
-     </Text>
+  const addTrackToPlaylist = async (plId: string) => {
+    if (!selectedTrack || selectedTrack.type !== 'track') return;
+    const plSnap = await new Promise<any>((res) => onValue(ref(database, `playlists/${plId}`), s => res(s.val()), { onlyOnce: true }));
+    if (!plSnap) return;
+    if (plSnap.songs?.some((s: Song) => s.spotify_id === selectedTrack.id)) {
+      console.log('Song already exists in playlist');
+      setPlaylistModal(false);
+      return;
+    }
+    const newSong: Song = {
+      spotify_id: selectedTrack.id,
+      name: selectedTrack.name,
+      artist: selectedTrack.artists?.map(a => a.name).join(', ') || '',
+      spotify_uri: selectedTrack.uri || '',
+      duration_ms: selectedTrack.duration_ms || 0,
+      cover_art: selectedTrack.album?.images[0]?.url || '',
+      album: selectedTrack.album?.name || '',
+    };
+    const updated = [...(plSnap.songs || []), newSong];
+    await set(ref(database, `playlists/${plId}/songs`), updated);
+    setPlaylistModal(false);
+    setSelectedTrack(null);
+  };
 
+  const createPlaylistAndAdd = async () => {
+    if (!currentUser?.id || !selectedTrack) return;
+    const playlistsRef = ref(database, 'playlists');
+    const newRef = push(playlistsRef);
+    const id = newRef.key as string;
+    const owner = currentUser as UserRef;
+    const playlist: Playlist = {
+      id,
+      name: newName,
+      description: '',
+      cover_art: placeholderCover,
+      owner,
+      harmonizers: [owner],
+      og_platform: 'harmonize',
+      songs: [],
+    };
+    await set(newRef, playlist);
+    await set(ref(database, `users/${currentUser.id}/userPlaylists/${id}`), true);
+    setNewName('');
+    setNewModal(false);
+    addTrackToPlaylist(id);
+  };
 
-    <View style = {styles.searchContainer}>
-           <Searchbar
-             placeholder="Search Songs, Albums, and Artists"
-             value={searchQuery}
-             onChangeText={handleSearchQueryChange}
-             style={styles.searchbar}
-           />
-      </View>
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemedView style={styles.overall}>
+        <Text variant="displayMedium" style={styles.title}>SEARCH</Text>
+        <View style={styles.searchContainer}>
+          <Searchbar placeholder="Search songs, albums, artists" value={query} onChangeText={setQuery} style={styles.searchbar} />
+        </View>
+        {loading ? <ActivityIndicator /> : (
+          <FlatList
+            data={results}
+            keyExtractor={(i) => `${i.type}_${i.id}`}
+            renderItem={({ item }) => (
+              <List.Item
+                style={styles.resultItem}
+                title={item.name}
+                titleStyle={styles.name}
+                description={
+                  item.type === 'track'
+                    ? `Song - ${item.artists?.map(a => a.name).join(', ')}`
+                    : item.type === 'album'
+                    ? `Album - ${item.artists?.map(a => a.name).join(', ')}`
+                    : 'Artist'
+                }
+                descriptionStyle={styles.description}
+                left={() =>
+                  <Image
+                    source={{ uri: item.album?.images[0]?.url || item.images?.[0]?.url || '' }}
+                    style={styles.thumbnail}
+                  />
+                }
+                right={() =>
+                  item.type === 'track' ? (
+                    <IconButton
+                      icon="plus-circle-outline"
+                      size={25}
+                      onPress={() => openPicker(item)}
+                      style={styles.addIcon}
+                      iconColor="white"
+                    />
+                  ) : null
+                }
+              />
+            )}
+          />
+        )}
 
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <FlatList 
-          data={results} 
-          keyExtractor={(item: SpotifyItem) => item.id}
-          renderItem={({ item}: { item: SpotifyItem }) => (
-          <List.Item
-          title={item.name}
-          titleStyle={styles.name}
-          description={
-            item.type === 'artist'
-              ? 'Artist'
-              : item.type === 'album'
-              ? `Album - ${item.artists?.map((artist) => artist.name).join(', ')}`
-              : item.type === 'track'
-              ? `Song - ${item.artists?.map((artist) => artist.name).join(', ')}`
-              : ''
-          }
-          descriptionStyle={styles.description}
-          left={() =>
-            (item.images && item.images.length > 0) || (item.album && item.album.images && item.album.images.length > 0) ? (
-              <Image 
-                source={{
-                  uri:
-                    item.type === 'track' && item.album?.images?.length
-                      ? item.album.images[0].url
-                      : item.images && item.images.length > 0
-                      ? item.images[0].url
-                      : 'fallback_image_url'
-              }}
-              style={styles.thumbnail}
-            />
-            ) : (
-              <List.Icon icon="music" />
-            )
-          }
-          right={() =>
-            <View style={styles.rightContainer}>
-            <IconButton
-               icon="plus-circle-outline"
-               size={25}
-               onPress={() => handleAddSong(item)}
-               style={styles.add_icon}
-               iconColor="white"
-             />
+        {/* Playlist picker modal */}
+        <Modal visible={playlistModal} transparent onRequestClose={() => setPlaylistModal(false)}>
+          <View style={styles.modalWrap}>
+            <View style={styles.modalBox}>
+              <Text variant="titleLarge">Add to playlist</Text>
+              <FlatList
+                data={userPlaylists}
+                keyExtractor={(p) => p.id}
+                style={{ maxHeight: 250 }}
+                renderItem={({ item }) => (
+                  <List.Item
+                    title={item.name}
+                    titleStyle={styles.modalTitle}
+                    left={() => (
+                      <Image source={typeof item.cover_art === 'string' ? { uri: item.cover_art } : item.cover_art} style={styles.thumbnail} />
+                    )}
+                    onPress={() => addTrackToPlaylist(item.id)}
+                  />
+                )}
+              />
+              <Button mode="outlined" onPress={() => { setPlaylistModal(false); setNewModal(true); }}>New Playlist</Button>
+              <Button onPress={() => setPlaylistModal(false)}>Cancel</Button>
             </View>
-          }
-        />
-      )}/>
-    </GestureHandlerRootView>
+          </View>
+        </Modal>
 
-    {/* First Modal: shows the option to add song to a new or existing playlist  */}
-    <Modal
-      visible={modalVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={closeModal}
-    >
-      <View style={styles.modalOverlay}>
-        <ThemedView style={styles.modalContent}>
-          <Text variant="headlineMedium" style={styles.addTitle}>Add to Playlist</Text>
-          <Button onPress={openNewPlaylistModal} style= {styles.newPlaylistButton} labelStyle={{color: 'black'}}>New Playlist</Button>
-          <Button onPress={closeModal} labelStyle={{ color:'white'}}>Cancel</Button>
-        </ThemedView>
-      </View>
-    </Modal>
-  {/* Second Modal: shows the option to create a new playlist */} 
-  <Modal
-    visible={newPlaylistModalVisible}
-    transparent={true}
-    onRequestClose={closeNewPlaylistModal}>
-    <View style={styles.innerContainer}>
-      <ThemedView style={styles.playlistModalContent}>
-        <Text variant="headlineMedium" style={styles.addTitle}>Playlist Name</Text>
-        <TextInput
-              label="Enter Playlist Name"
-              mode="outlined"
-              value={playlistName}
-              onChangeText={setPlaylistName}
-              style={styles.playlistInput}
-        />
-        <Button onPress={addNewPlaylist} style={styles.newPlaylistButton} labelStyle={{ color: 'black' }}>Create</Button>
-        <Button onPress={closeNewPlaylistModal} labelStyle={{ color:'white'}}>Cancel</Button>
+        {/* New playlist modal */}
+        <Modal visible={newModal} transparent onRequestClose={() => setNewModal(false)}>
+          <View style={styles.modalWrap}>
+            <View style={styles.modalBox}>
+              <Text variant="titleLarge">Create Playlist</Text>
+              <TextInput label="Playlist name" mode="outlined" value={newName} onChangeText={setNewName} style={styles.input} />
+              <Button mode="contained" onPress={createPlaylistAndAdd} disabled={!newName.trim()}>Create & Add</Button>
+              <Button onPress={() => setNewModal(false)}>Cancel</Button>
+            </View>
+          </View>
+        </Modal>
       </ThemedView>
-    </View>
-  </Modal>  
-   </ThemedView>
- );
+    </GestureHandlerRootView>
+  );
 }
-
 
 const styles = StyleSheet.create({
- overall: {
-  alignItems: 'center',
-  flex:1,
-  justifyContent: 'flex-start',
-  paddingTop: 60,
- },
- title:{
-  fontWeight: 'bold',
-  color: 'darkgrey',
-  position: 'absolute',
-  top: 80,
-  left: 25,
-  justifyContent: 'flex-start',
- },
- searchContainer:{
-  marginTop:100,
-  width: '90%'
- },
- searchbar: {
-  width: '100%',
-  marginBottom: 20,
- },
- subtitleContainer: {
-  width: '100%',
-  paddingLeft: 25,
- },
- subtitle: {
-  color: 'darkgrey',
-  fontWeight: 'normal',
-  fontSize: 18,
-  textAlign: 'left'
- },
- name:{
-  left:25,
-  color: 'white'
- },
- description:{
-  left:25,
-  color:'grey'
- },
- thumbnail: {
-  width: 50,
-  height: 50,
-  borderRadius: 4,
-  left:25
- },
- rightContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingRight: 34,  
- },
- add_icon: {
-  width: 24, 
-  height: 24,
-  right: -24
- },
- modalOverlay: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-modalContent: {
-  width: '100%',
-  height:'90%',
-  backgroundColor: 'transparent',
-  padding: 20,
-  borderRadius: 10,
-  alignItems: 'center',
-  // borderWidth: 2,  // Adds a border
-  // borderColor: 'black',  // Sets the border color
- },
- playlistModalContent: {
-  backgroundColor: 'black',
-  padding: 20,
-  borderRadius: 10,
-  alignItems: 'center',
-  width: '80%',
-  maxWidth: 400,
-},
- modalContainer: {
-  backgroundColor: 'transparent',
-  padding: 10,
-  width: 300, // Explicit width
-  height: 300,
-  alignSelf: 'center',
-  borderRadius: 10,
- },
- innerContainer: {
-  flex: 1,
-  justifyContent: 'center',
-  color: 'grey',
-  alignItems: 'center',
+  overall: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 60,
+    justifyContent: 'flex-start',
+  },
 
- },
-addTitle: {
-  color: 'white',
-  fontSize: 20,
-  marginBottom: 20,
-},
-newPlaylistButton: {
-  backgroundColor: 'white',
-  marginBottom: 20,
-  width: '50%',
-  paddingVertical: 10,
-  borderRadius: 30,
-  height: 60,
-  
-},
-playlistInput: {
-  width: '80%',
-  marginBottom: 20,
-},
+  title: {
+    fontWeight: 'bold',
+    color: 'darkgrey',
+    position: 'absolute',
+    top: 80,
+    left: 25,
+  },
+
+  searchContainer: {
+    marginTop: 100,
+    width: '90%',
+  },
+  searchbar: {
+    width: '100%',
+    marginBottom: 20,
+  },
+
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+  },
+  textContainer: {
+    flex: 1,
+    marginLeft: 16,
+    marginRight: 48,    
+  },
+  name: {
+    color: 'white',
+  },
+  description: {
+    color: 'grey',
+  },
+  addIcon: {
+    marginRight: 2,
+  },
+
+  modalWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalBox: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 8,
+    width: '85%',
+  },
+  modalTitle: {
+    fontWeight: 'bold',
+  },
+  input: {
+    marginVertical: 12,
+  },
 });
