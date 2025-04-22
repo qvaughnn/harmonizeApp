@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Image, FlatList, Pressable } from 'react-native';
-import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List } from 'react-native-paper';
+import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List, Icon } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
@@ -34,6 +34,10 @@ export default function PlaylistScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Confirm remove song modal state
+  const [confirmRemoveVisible, setConfirmRemoveVisible] = useState(false);
+  const [selectedSongToRemove, setSelectedSongToRemove] = useState<Song | null>(null);
 
   
   // Load Playlist from Firebase
@@ -227,7 +231,10 @@ export default function PlaylistScreen() {
                 <IconButton
                   icon="minus-circle"
                   size={24}
-                  onPress={() => removeSong(item)}
+                  onPress={() => {
+                    setSelectedSongToRemove(item);
+                    setConfirmRemoveVisible(true);
+                  }}
                   iconColor="white"
                 />
               </View>
@@ -286,6 +293,23 @@ export default function PlaylistScreen() {
           
         </View>
       </Modal>
+      <Modal visible={confirmRemoveVisible} onDismiss={() => setConfirmRemoveVisible(false)}>
+        <ThemedView style={styles.confirmModal}>
+          <Text style={styles.confirmText}>
+            Are you sure you want to remove{' '}
+            <Text style={{ fontWeight: 'bold', color:'white'}}>{selectedSongToRemove?.name}</Text>?
+          </Text>
+          <View style={styles.buttonContainer}>
+            <Pressable style={styles.confirmButton} >
+               <Text style={styles.confirmButtonText}>Yes</Text> 
+            </Pressable>
+            <Pressable style={styles.cancelButton} onPress={() => setConfirmRemoveVisible(false)}>
+               <Text style={styles.cancelButtonText}>Cancel</Text> 
+            </Pressable>
+          </View>
+        </ThemedView>
+      </Modal>
+
     </ThemedView>
   );
 }
@@ -406,4 +430,50 @@ const styles = StyleSheet.create({
     borderRadius: 4, 
     marginRight: 8 
   },
+  confirmModal: {
+    padding: 30,
+    margin: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  confirmText: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: 'white',
+  },
+  buttonContainer:{
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    width: '100%',
+    marginTop: 10,
+  },
+  confirmButton: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    color: 'black',
+    fontSize: 16,
+  },
+  
+  cancelButtonText: {
+    color: 'black',
+    fontSize: 16,
+  },
+  
 });
