@@ -214,10 +214,17 @@ export default function PlaylistScreen() {
               ) : null} 
 
           <View style={styles.exportEditContainer}>
-            <Pressable onPress={() => router.push('/friends')}>
-              <Text style={styles.export}>Export</Text>
-            </Pressable>
+            {/* <Pressable onPress={() => router.push('/friends')}> */}
+              {/* <Text style={styles.export}>Export</Text> */}
+              <IconButton
+                icon="export-variant"
+                size={28}
+                onPress={()=>router.push('/friends')}
+                iconColor="white"
+              />
+            {/* </Pressable> */}
 
+            {/* Add Collaborator Button */}
             <IconButton
             icon="account-multiple-plus"
             size={28}
@@ -228,9 +235,15 @@ export default function PlaylistScreen() {
             iconColor="white"
           />
 
-            <Pressable onPress={() => setEditMode(prev => !prev)}>
-              <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text>
-            </Pressable>
+            {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
+              {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
+              <IconButton
+                icon ="pencil-circle"
+                onPress={()=>setEditMode(prev => !prev)}
+                size={28}
+                iconColor="white"
+              />
+            {/* </Pressable> */}
             </View>
           </View>
           </View>
@@ -498,10 +511,11 @@ const styles = StyleSheet.create({
   exportEditContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    alignItems: 'center',
     width: '100%',
     paddingHorizontal: 10,
   },
+
   
   edit: {
     color: 'white',
