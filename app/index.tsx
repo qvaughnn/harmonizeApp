@@ -79,7 +79,7 @@ async function getSpotifyUserCode(id: string): Promise<string | null> {
 
 export default function HomeScreen() {
   const [token, setLocalToken] = useState<string | null>(null);
-  const { setToken, setSpotifyUserId } = useAuth();
+  const { setToken, setSpotifyUserId, setCurrentUser } = useAuth();
   const router = useRouter();
   const { setMusicService } = useMusicService();
   const { musicService } = useMusicService();
@@ -220,6 +220,12 @@ export default function HomeScreen() {
       }
 
       setSpotifyUserId(spotifyUserId);
+      
+      //Saving user ref to Context
+      setCurrentUser({
+        id: userCode ?? 'Unknown User ID',
+        name: userProfile.display_name ?? 'Unknown User',
+      });
 
       // Save token and user profile in Firebase Realtime Database
       const userRef = ref(database, `users/${userCode}/Spotify`)

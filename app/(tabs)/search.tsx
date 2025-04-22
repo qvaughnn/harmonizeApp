@@ -59,6 +59,7 @@ async function addSong(playlistRef: string, spotifyId: string, musicService : 'S
     songsRef = ref(database, `playlists/${playlistRef}/songs/apple`)
   }
   
+
   console.log("Playlist Ref: ", playlistRef);
 
   // generates unique id for song
@@ -78,7 +79,6 @@ async function addSong(playlistRef: string, spotifyId: string, musicService : 'S
       console.error("Error adding song: ", error);
     });
 }
-
 
 export default function TabTwoScreen() {
  const [searchQuery, setSearchQuery] = React.useState('');
@@ -188,7 +188,6 @@ export default function TabTwoScreen() {
   }
 }
 
-
   const closeModal = () => {
     setModalVisible(false);
     setSelectedSong(null);
@@ -249,16 +248,11 @@ export default function TabTwoScreen() {
 /*
   const handleAdd = (item : SpotifyItem) => {
     console.log("Adding song: $(item.name) by ")
+=======
+>>>>>>> refs/remotes/origin/main
 
-    //add to playlist API call
-  }
 
-  // handles adding a song to a playlist
-  const handleAddSong = (item: SpotifyItem) => {
-    setSelectedSong(item);
-    console.log("Adding song: ", item.name);
-    setModalVisible(true);
-  };
+
 
   const closeModal = () => {
     setModalVisible(false);
@@ -275,11 +269,47 @@ export default function TabTwoScreen() {
     setPlaylistName(''); // Reset the input field
   };
 
-  const addNewPlaylist = () => {
+
+  const addNewPlaylist = async() => {
     console.log("Creating new playlist with name: ", playlistName);
-    // You can handle the logic to create the playlist here
-    closeNewPlaylistModal(); // Close the modal after creating the playlist
+    try{
+      const newKey = await createPlaylist(playlistName, "authorID", "imageURL");
+      if (newKey !== null){
+        await onPlaylistClicked(newKey);
+      }
+    } catch(error){
+      console.error("Error creating playlist:", error);   
+    } finally {
+      closeNewPlaylistModal(); // Close the modal after creating the playlist
+    }  
   };
+  const onPlaylistClicked = async (playlistKey: string) => {
+    try{
+      if (selectedSong && playlistKey){
+        await addSong(playlistKey, selectedSong.id);
+      } 
+    } catch(error){
+      console.error("Error adding song to playlist:", error);   
+    } finally{
+      setModalVisible(false);
+      setSelectedSong(null);
+    }
+  };
+
+    // handles adding a song to a playlist
+    const handleAddSong = async (item: SpotifyItem) => {
+      setSelectedSong(item);
+      // try{
+      //   const key = await createPlaylist(item.name, "authorID", "imageURL");
+      //   console.log("Key: ", key);
+      //   if (key !== null){
+      //     await addSong(key, item.id);
+      //   }
+      // } catch(error){
+      //   console.error("Error adding song to playlist:", error);   
+      // }
+      setModalVisible(true);
+    };
 
 */
 
@@ -339,10 +369,10 @@ export default function TabTwoScreen() {
             <View style={styles.rightContainer}>
             <IconButton
                icon="plus-circle-outline"
-               size={30}
+               size={25}
                onPress={() => handleAddSong(item)}
                style={styles.add_icon}
-               iconColor="black"
+               iconColor="white"
              />
             </View>
           }
