@@ -195,6 +195,15 @@ export default function SearchScreen() {
                       style={styles.addIcon}
                       iconColor="white"
                     />
+                  ) :
+                  item.type === 'album' ? (
+                    <IconButton
+                      icon="arrow-right"
+                      size={25}
+                      onPress={() => openPicker(item)}
+                      style={styles.addIcon}
+                      iconColor="white"
+                    />
                   ) : null
                 }
               />
