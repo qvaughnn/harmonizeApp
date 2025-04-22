@@ -238,7 +238,7 @@ export default function PlaylistScreen() {
             {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
               {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
               <IconButton
-                icon ="pencil-circle"
+                icon ="pencil"
                 onPress={()=>setEditMode(prev => !prev)}
                 size={28}
                 iconColor="white"
