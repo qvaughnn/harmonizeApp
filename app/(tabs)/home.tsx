@@ -4,20 +4,26 @@ import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
 import { useAuth } from '../../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { database } from '../config/firebase';
+import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
+import { ref, set, get, onValue, push } from 'firebase/database';
 
 const { width } = Dimensions.get('window');
 
-export default function Home() {
+const Home = () => {
+
+  const { currentUser } = useAuth(); 
   const router = useRouter();
   const { token } = useAuth(); 
+  const [results, setResults] = useState<PlaylistPreview[]>([]);
   const [images, setImages] = useState<{ id: string; uri: string }[]>([]);
 
-  useEffect(() => {
-    if (token) {
-      fetchPlaylists();
-    }
-  }, [token]);
+  // useEffect(() => {
+  //   if (token) {
+  //     fetchPlaylists();
+  //   }
+  // }, [token]);
 
   const friends = [
     {name: 'Alice', playlists: 4, avatar:require('../../assets/images/avatar.png')},
@@ -25,32 +31,35 @@ export default function Home() {
     {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')}, 
   ]
 
-  const fetchPlaylists = async () => {
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/playlists', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        // Extract the playlist images
-        const fetchedImages = (data.items || []).map((playlist: any) => ({
-          id: playlist.id,
-          uri:
-            playlist.images && playlist.images.length > 0
-              ? playlist.images[0].url
-              : require('../../assets/images/coverSample.png'),
-        }));
-        setImages(fetchedImages);
-      } else {
-        console.error('Error fetching playlists:', data);
+  // Fetch playlists the user has access to from Firebase
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const userPlaylistsRef = ref(database, `users/${currentUser.id}/userPlaylists`);
+    const unsubscribe = onValue(
+      userPlaylistsRef,
+      async (snapshot) => {
+        if (snapshot.exists()) {
+          const ids: string[] = Object.keys(snapshot.val() || {});
+          const promises = ids.map((id) =>
+            get(ref(database, `playlists/${id}`)).then((snap) => (snap.exists() ? snap.val() : null))
+          );
+          const playlistsData = (await Promise.all(promises)).filter((p) => p);
+          const previews: PlaylistPreview[] = playlistsData.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            cover_art: p.cover_art,
+          }));
+          setResults(previews);
+        } else {
+          setResults([]);
+        }
+      },
+      (error) => {
+        console.error('Error fetching user playlists:', error);
       }
-    } catch (error) {
-      console.error('Playlists fetch error:', error);
-    }
-  };
+    );
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Navigate to /playlist screen, passing the playlistId
   const handlePlaylistPress = (playlistId: string) => {
@@ -63,7 +72,7 @@ export default function Home() {
       <Card style={{ borderRadius: 10 }}>
         <View style={{ borderRadius: 10, overflow: 'hidden' }}>
           <Image
-            source={typeof item.uri === 'string' ? { uri: item.uri } : item.uri}
+            source={typeof item.cover_art === 'string' ? { uri: item.cover_art } : item.cover_art}
             style={{ width: '100%', height: 270 }}
             resizeMode="cover"
           />
@@ -74,7 +83,7 @@ export default function Home() {
 
   const ImageCarousel = () => (
     <Carousel
-      data={images}
+      data={results}
       renderItem={renderCarouselItem}
       sliderWidth={width}
       itemWidth={width * 0.8}
@@ -167,6 +176,8 @@ export default function Home() {
     </ThemedView>
   );
 }
+
+export default Home;
 
 const styles = StyleSheet.create({
   overall: {
