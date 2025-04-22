@@ -92,7 +92,6 @@ const AllPlaylists = () => {
   const showPopup = () => setVisible(true);
   const hidePopup = () => setVisible(false);
 
-//   const [checked, setChecked] = useState(false);
   const [checkedPlaylists, setCheckedPlaylists] = useState<string[]>([]);
 
   const togglePlaylist = (playlistId: string) => {
