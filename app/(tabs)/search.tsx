@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Modal } from 'react-native';
 import { GestureHandlerRootView, FlatList } from 'react-native-gesture-handler';
-import { Searchbar, List, IconButton, Button, TextInput, Text, ActivityIndicator } from 'react-native-paper';
+import { Searchbar, List, IconButton, Button, TextInput, Text, ActivityIndicator, Icon } from 'react-native-paper';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '../../contexts/AuthContext';
 import { database } from '../config/firebase';
 import { ref, onValue, set, push, get } from 'firebase/database';
 import { Playlist, PlaylistPreview, Song, UserRef } from '@/types';
+import { FA6Style } from '@expo/vector-icons/build/FontAwesome6';
+import { transparent } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 
 
 interface SearchItem {
@@ -38,6 +40,9 @@ export default function SearchScreen() {
   // new playlist modal
   const [newModal, setNewModal] = useState(false);
   const [newName, setNewName] = useState('');
+
+  // successful adding of song modal
+  const [successModal, setSuccessModal] = useState(false);
 
   // Load user playlists
   useEffect(() => {
@@ -131,6 +136,7 @@ export default function SearchScreen() {
     await set(ref(database, `playlists/${plId}/songs`), updated);
     setPlaylistModal(false);
     setSelectedTrack(null);
+    setSuccessModal(true);
   };
 
   const createPlaylistAndAdd = async () => {
@@ -154,7 +160,17 @@ export default function SearchScreen() {
     setNewName('');
     setNewModal(false);
     addTrackToPlaylist(id);
+    setSuccessModal(true);
   };
+
+  // Successful Add Timed Popup
+  useEffect( () => {
+    if(successModal) {
+      const timer = setTimeout( () => {
+        setSuccessModal(false);
+      }, 500);
+    }
+  })
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -239,6 +255,21 @@ export default function SearchScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Successful adding */}
+        <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
+          <View style={styles.modalWrap}>
+            <View style={styles.modalBoxSuccess}>
+              <IconButton
+                icon='check'
+                size={60}
+                iconColor='black'
+              />
+              <Text variant="titleLarge">Successfully Added!</Text>
+            </View>
+          </View>
+        </Modal>
+
       </ThemedView>
     </GestureHandlerRootView>
   );
@@ -312,5 +343,14 @@ const styles = StyleSheet.create({
   },
   input: {
     marginVertical: 12,
+  },
+  modalBoxSuccess: {
+    backgroundColor: 'white',
+    opacity: 0.7,
+    padding: 15,
+    borderRadius: 8,
+    width: '85%',
+    alignItems: 'center',
+    flexDirection: 'row'
   },
 });
