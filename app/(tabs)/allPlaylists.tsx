@@ -119,13 +119,12 @@ const AllPlaylists = () => {
         PLAYLISTS
       </Text>
       <IconButton
-              icon="plus-circle-outline"
-              size={40}
-              onPress={showPopup}
-              style={styles.addIcon}
-              iconColor="grey"
-            />
-
+        icon="plus-circle-outline"
+        size={40}
+        onPress={showPopup}
+        style={styles.addIcon}
+        iconColor="grey"
+      />
       <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Search Playlists"
