@@ -6,7 +6,7 @@ import { app, database } from "../config/firebase";
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
 
 // returns true if successful and false if not
-async function addFriend(currentUser: string, targetUser: string): Promise<boolean> {
+export async function addFriend(currentUser: string, targetUser: string): Promise<boolean> {
   try {
     const sentRef = ref(database, `friend_requests/${currentUser}/sent/${targetUser}`);
     const receivedRef = ref(database, `friend_requests/${targetUser}/received/${currentUser}`);
@@ -25,7 +25,7 @@ async function addFriend(currentUser: string, targetUser: string): Promise<boole
 }
 
 // returns true if successful and false if not
-async function removeFriend(currentUser: string, targetUser: string): Promise<boolean> {
+export async function removeFriend(currentUser: string, targetUser: string): Promise<boolean> {
   try {
     const userFriendRef = ref(database, `friends/${currentUser}/${targetUser}`);
     const friendUserRef = ref(database, `friends/${targetUser}/${currentUser}`);
@@ -42,7 +42,7 @@ async function removeFriend(currentUser: string, targetUser: string): Promise<bo
   }
 }
 
-async function cancelFriendRequest(currentUser: string, targetUser: string): Promise<boolean> {
+export async function cancelFriendRequest(currentUser: string, targetUser: string): Promise<boolean> {
   try {
     const sentRef = ref(database, `friend_requests/${currentUser}/sent/${targetUser}`);
     const receivedRef = ref(database, `friend_requests/${targetUser}/received/${currentUser}`);
@@ -59,7 +59,7 @@ async function cancelFriendRequest(currentUser: string, targetUser: string): Pro
   }
 }
 
-async function declineFriendRequest(currentUser: string, requester: string): Promise<boolean> {
+export async function declineFriendRequest(currentUser: string, requester: string): Promise<boolean> {
   try {
     const receivedRef = ref(database, `friend_requests/${currentUser}/received/${requester}`);
     const sentRef = ref(database, `friend_requests/${requester}/sent/${currentUser}`);
@@ -76,7 +76,7 @@ async function declineFriendRequest(currentUser: string, requester: string): Pro
   }
 }
 
-async function acceptFriendRequest(currentUser: string, requester: string): Promise<boolean> {
+export async function acceptFriendRequest(currentUser: string, requester: string): Promise<boolean> {
   try {
     // Create mutual friendship
     const userFriendRef = ref(database, `friends/${currentUser}/${requester}`);
@@ -100,7 +100,7 @@ async function acceptFriendRequest(currentUser: string, requester: string): Prom
   }
 }
 
-async function getFriends(userId: string): Promise<string[]> {
+export async function getFriends(userId: string): Promise<string[]> {
   try {
     const snapshot = await get(ref(database, `friends/${userId}`));
     if (snapshot.exists()) {
@@ -113,7 +113,7 @@ async function getFriends(userId: string): Promise<string[]> {
   }
 }
 
-async function getReceivedFriendRequests(userId: string): Promise<string[]> {
+export async function getReceivedFriendRequests(userId: string): Promise<string[]> {
   try {
     const snapshot = await get(ref(database, `friend_requests/${userId}/received`));
     if (snapshot.exists()) {
@@ -126,7 +126,7 @@ async function getReceivedFriendRequests(userId: string): Promise<string[]> {
   }
 }
 
-async function getSentFriendRequests(userId: string): Promise<string[]> {
+export async function getSentFriendRequests(userId: string): Promise<string[]> {
   try {
     const snapshot = await get(ref(database, `friend_requests/${userId}/sent`));
     if (snapshot.exists()) {
