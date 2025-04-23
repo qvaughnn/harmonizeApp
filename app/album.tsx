@@ -164,12 +164,12 @@ export default function Album() {
                 </View>
             </ScrollView>
 
-                    {/* Playlist picker modal */}
-                    <Modal visible={playlistModal} transparent onRequestClose={() => setPlaylistModal(false)}>
-                      <View style={styles.modalWrap}>
-                        <View style={styles.modalBox}>
-                          <Text variant="titleLarge">Add to playlist</Text>
-                          <FlatList
+            {/* Playlist picker modal */}
+            <Modal visible={playlistModal} transparent onRequestClose={() => setPlaylistModal(false)}>
+                <View style={styles.modalWrap}>
+                    <View style={styles.modalBox}>
+                        <Text variant="titleLarge">Add to playlist</Text>
+                        <FlatList
                             data={userPlaylists}
                             keyExtractor={(p) => p.id}
                             style={{ maxHeight: 250 }}
@@ -183,23 +183,23 @@ export default function Album() {
                                 onPress={() => addTrackToPlaylist(item.id)}
                               />
                             )}
-                          />
-                          <Button mode="outlined" onPress={() => { setPlaylistModal(false); setNewModal(true); }}>New Playlist</Button>
-                          <Button onPress={() => setPlaylistModal(false)}>Cancel</Button>
-                        </View>
-                      </View>
-                    </Modal>
-        {/* New playlist modal */}
-        <Modal visible={newModal} transparent onRequestClose={() => setNewModal(false)}>
-          <View style={styles.modalWrap}>
-            <View style={styles.modalBox}>
-              <Text variant="titleLarge">Create Playlist</Text>
-              <TextInput label="Playlist name" mode="outlined" value={newName} onChangeText={setNewName} style={styles.input} />
-              <Button mode="contained" onPress={createPlaylistAndAdd} disabled={!newName.trim()}>Create & Add</Button>
-              <Button onPress={() => setNewModal(false)}>Cancel</Button>
-            </View>
-          </View>
-        </Modal>
+                        />
+                        <Button mode="outlined" onPress={() => { setPlaylistModal(false); setNewModal(true); }}>New Playlist</Button>
+                        <Button onPress={() => setPlaylistModal(false)}>Cancel</Button>
+                    </View>
+                </View>
+            </Modal>
+            {/* New playlist modal */}
+            <Modal visible={newModal} transparent onRequestClose={() => setNewModal(false)}>
+                <View style={styles.modalWrap}>
+                    <View style={styles.modalBox}>
+                    <Text variant="titleLarge">Create Playlist</Text>
+                    <TextInput label="Playlist name" mode="outlined" value={newName} onChangeText={setNewName} style={styles.input} />
+                    <Button mode="contained" onPress={createPlaylistAndAdd} disabled={!newName.trim()}>Create & Add</Button>
+                    <Button onPress={() => setNewModal(false)}>Cancel</Button>
+                    </View>
+                </View>
+            </Modal>
         </ThemedView>
         );
         }
