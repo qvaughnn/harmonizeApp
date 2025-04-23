@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { database } from '../config/firebase';
 import { ref, onValue, set, push, get } from 'firebase/database';
 import { Playlist, PlaylistPreview, Song, UserRef } from '@/types';
+import { useRouter } from 'expo-router';
 
 
 interface SearchItem {
@@ -24,6 +25,7 @@ const placeholderCover = require('../../assets/images/coverSample.png');
 
 export default function SearchScreen() {
   const { token, currentUser } = useAuth();
+  const router = useRouter();
 
   // search state
   const [query, setQuery] = useState('');
@@ -200,7 +202,7 @@ export default function SearchScreen() {
                     <IconButton
                       icon="arrow-right"
                       size={25}
-                      onPress={() => openPicker(item)}
+                      onPress={() => router.push({ pathname: '/album', params: { id: item.id } })}
                       style={styles.addIcon}
                       iconColor="white"
                     />
