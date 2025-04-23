@@ -56,13 +56,27 @@ export default function Album() {
                 )}
 
                 <View>
-                    {tracks.map((track, index) => (
+                    {tracks.map((track) => (
                     <List.Item
                         key={track.id}
                         title={track.name}
                         description={track.artists.map(a => a.name).join(', ')}
                         titleStyle={styles.trackTitle}
                         descriptionStyle={styles.trackDesc}
+                        right={props => (
+                            <IconButton
+                                {...props}
+                                icon="plus-circle-outline"
+                                size={24}
+                                style={styles.addIcon}
+                                iconColor="white"
+                                onPress={() => {
+                                    // Handle add song to playlist
+                                    console.log(`Adding track: ${track.name}`); 
+                                }}
+
+                            />
+                        )}
                     />
                     ))}
                 </View>
@@ -110,6 +124,9 @@ export default function Album() {
               },
               trackDesc: {
                 color: 'grey',
+              },
+              addIcon: {
+                marginRight: 2,
               },
 
 });
