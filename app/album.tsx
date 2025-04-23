@@ -85,7 +85,7 @@ export default function Album() {
           artist: selectedTrack.artists?.map(a => a.name).join(', ') || '',
           spotify_uri: selectedTrack.uri || '',
           duration_ms: selectedTrack.duration_ms || 0,
-          cover_art: selectedTrack.album?.images[0]?.url || placeholderCover,
+          cover_art: album?.images?.[0]?.url || 'placeholderCover',
           album: selectedTrack.album?.name || '',
         };
         const updated = [...(plSnap.songs || []), newSong];
