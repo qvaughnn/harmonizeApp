@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { useRef, useEffect, useState } from 'react';
+import { Animated, StyleSheet,  TextInput, Image, View} from 'react-native';
+import {Button, Text} from 'react-native-paper';
 import { ThemedView } from '@/components/ThemedView';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,8 @@ export default function Authentication() {
   const router = useRouter();
   const { setCurrentUser } = useAuth();
   const auth = getAuth();
+  const splashOpacity = useRef(new Animated.Value(1)).current;
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleAuth = async () => {
     try {
@@ -68,44 +70,84 @@ export default function Authentication() {
     }
   };
 
+  useEffect(() => {
+    // Sequence: hold at 1, then fade out to 0
+    Animated.sequence([
+      Animated.delay(500),                   // optional pause before fading
+      Animated.timing(splashOpacity, {
+        toValue: 0,
+        duration: 1800,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowSplash(false);
+    });
+  }, [splashOpacity]);
+
   return (
+    <View style={styles.wrapper}>
     <ThemedView style={styles.container}>
-      <Text style={styles.title}>{isLogin ? 'Login' : 'Sign Up'}</Text>
+      <Image
+          source={require('@/assets/images/fadeIn.png')}
+          style={styles.reactLogo}
+      />
+      <Text style={styles.title}>{isLogin ? 'HARMONIZE LOGIN' : 'HARMONIZE SIGNUP'}</Text>
       
       {error && <Text style={styles.error}>{error}</Text>}
       
       <TextInput
-        label="Email"
+        placeholder="Email"
         value={email}
         onChangeText={setEmail}
-        style={styles.input}
         autoCapitalize="none"
+        style={[
+          styles.input,
+          {
+            backgroundColor: 'white',
+          }
+        ]}
       />
       
       <TextInput
-        label="Password"
+        placeholder="Password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            backgroundColor: 'white',
+          }
+        ]}
       />
       
-      <Button
-        mode="contained"
-        onPress={handleAuth}
-        style={styles.button}
-      >
-        {isLogin ? 'Login' : 'Sign Up'}
+      <Button 
+        style={styles.button} 
+        mode="elevated"
+        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}
+        onPress={handleAuth}>
+          {isLogin ? 'Login' : 'Sign Up'}
       </Button>
       
       <Button
         mode="text"
         onPress={() => setIsLogin(!isLogin)}
         style={styles.switchButton}
+        labelStyle={{ color: 'white', fontWeight: 'bold', fontSize: 15, }}
       >
         {isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'}
       </Button>
     </ThemedView>
+    {showSplash && (
+      <Animated.View style={[styles.splash, { opacity: splashOpacity }]}>
+        <Image
+          source={require('@/assets/images/fadeIn3.png')}
+          style={styles.splashImage}
+          resizeMode="cover"
+        />
+      </Animated.View>
+    )}
+    </View>
   );
 }
 
@@ -116,22 +158,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 24,
-    marginBottom: 20,
+    fontSize: 35,
+    marginBottom: 40,
     textAlign: 'center',
+    color: 'grey',
+    fontWeight: 'bold',
   },
   input: {
-    marginBottom: 15,
+    marginBottom: 12,
+    elevation: 5,
+    borderRadius: 20,
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    paddingHorizontal: 12,
+    height: 48,
   },
   button: {
-    marginTop: 10,
+    marginTop: 25,
+    backgroundColor: '#76448A',
   },
   switchButton: {
     marginTop: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 100,
   },
   error: {
     color: 'red',
     marginBottom: 10,
     textAlign: 'center',
   },
+  reactLogo: {
+    height: '50%',
+    width: '100%',
+    // marginVertical: 5,
+  },
+  splash: {
+    ...StyleSheet.absoluteFillObject,    // top:0,left:0,right:0,bottom:0
+    backgroundColor: '#fff',              // or your brand color
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  splashImage: {
+    width: '100%',
+    height: '100%',
+  },
+  wrapper: { flex: 1 },
 });
