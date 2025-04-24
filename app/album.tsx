@@ -34,22 +34,37 @@ export default function Album() {
     const [newName, setNewName] = useState('');
     const placeholderCover = require('../assets/images/coverSample.png');
 
-    // Load user playlists
-    useEffect(() => {
-        if (!currentUser?.id) return;
-        const userRef = ref(database, `users/${currentUser.id}/userPlaylists`);
-        const unsub = onValue(userRef, async (snap) => {
-          if (!snap.exists()) { setUserPlaylists([]); return; }
-          const ids = Object.keys(snap.val());
-          const list: PlaylistPreview[] = [];
-          for (const id of ids) {
-            const data = await new Promise<any>((resolve) => onValue(ref(database, `playlists/${id}`), s => resolve(s.val()), { onlyOnce: true }));
-            if (data) list.push({ id: data.id, name: data.name, cover_art: data.cover_art || placeholderCover });
-          }
-          setUserPlaylists(list);
-        });
-        return () => unsub();
-      }, [currentUser]);
+// Load user playlists
+useEffect(() => {
+  if (!currentUser?.id) return;
+  const userRef = ref(database, `users/${currentUser.id}/userPlaylists`);
+  const unsub = onValue(userRef, async (snap) => {
+    if (!snap.exists()) { setUserPlaylists([]); return; }
+    const ids = Object.keys(snap.val());
+
+    // Create an array of Promises using get()
+    const promises = ids.map(id => get(ref(database, `playlists/${id}`)));
+
+    // Wait for all promises to resolve
+    const snapshots = await Promise.all(promises);
+
+    // Process the results
+    const list: PlaylistPreview[] = snapshots
+      .map(s => s.val()) // Get the data from each snapshot
+      .filter(data => data) // Filter out any null/non-existent playlists
+      .map(data => ({
+        id: data.id,
+        name: data.name,
+        cover_art: data.cover_art || placeholderCover
+      }));
+
+    setUserPlaylists(list);
+  });
+  return () => {
+    unsub();
+    console.log('Album Page Playlists unmounted');
+  }
+}, []);
 
     useEffect(() => {
         const fetchAlbum = async () => {
