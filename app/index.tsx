@@ -15,7 +15,7 @@ export default function Authentication() {
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const router = useRouter();
-  const { setCurrentUser } = useAuth();
+  const { setToken, setCurrentUser } = useAuth();
   const auth = getAuth();
 
   const handleAuth = async () => {
@@ -37,20 +37,37 @@ export default function Authentication() {
             id: userCredential.user.uid,
             name: userData.displayName || email,
           });
-          
+
+          const userSpotifyRef = ref(database, `users/${userCredential.user.uid}/Spotify`);
+          const spotifySnapshot = await get(userSpotifyRef);
+          const spotifyData = spotifySnapshot?.val();
+
           // If Spotify token exists, check if it needs refresh
-          if (userData.Spotify?.accessToken) {
-            const userSpotifyRef = ref(database, `users/${userCredential.user.uid}/Spotify`);
-            const spotifySnapshot = await get(userSpotifyRef);
-            refreshSpotifyToken(userCredential.user.uid, spotifySnapshot?.val().refreshToken);
+          if (spotifyData && spotifyData.accessToken) {
+            console.log("Found Spotify data:", spotifyData)
+            const now = Date.now();
+            if (now >= spotifyData.expiresAt) {
+              console.log("Token expired, attempting refresh")
+              // Token is expired, refresh it
+              try {
+                router.replace('/connect');
+                // setToken(await refreshSpotifyToken(userCredential.user.uid, spotifyData.refreshToken));
+                // console.log("Spotify token refresh completed");
+              } catch (error) {
+                console.error("Error refreshing token:", error);
+              }
+            }
+            console.log("Now going to home")
             // Navigate to home page
-            router.replace('/home');
+            router.replace('/(tabs)/home');
           } else {
             // No music service connected yet
+            console.log("No music service connected yet")
             router.replace('/connect');
           }
         } else {
           // User exists but no profile
+          console.log("User exists but no profile")
           router.replace('/connect');
         }
       } else {
