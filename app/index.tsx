@@ -61,7 +61,7 @@ export default function Authentication() {
             }
             console.log("Now going to home")
             // Navigate to home page
-            router.replace('/(tabs)/home');
+            // router.replace('/(tabs)/home');
           } else {
             // No music service connected yet
             console.log("No music service connected yet")
