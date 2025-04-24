@@ -41,6 +41,9 @@ export default function SearchScreen() {
   const [newModal, setNewModal] = useState(false);
   const [newName, setNewName] = useState('');
 
+  // successful modal
+  const [successModal, setSuccessModal] = useState(false);
+
   // Load user playlists
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -133,6 +136,7 @@ export default function SearchScreen() {
     await set(ref(database, `playlists/${plId}/songs`), updated);
     setPlaylistModal(false);
     setSelectedTrack(null);
+    setSuccessModal(true);
   };
 
   const createPlaylistAndAdd = async () => {
@@ -156,7 +160,17 @@ export default function SearchScreen() {
     setNewName('');
     setNewModal(false);
     addTrackToPlaylist(id);
+    setSuccessModal(true);
   };
+
+  // Successful Add Timed Popup
+  useEffect(() => {
+    if (successModal) {
+      const timer = setTimeout(() => {
+        setSuccessModal(false);
+      }, 500);
+    }
+  })
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -178,8 +192,8 @@ export default function SearchScreen() {
                   item.type === 'track'
                     ? `Song - ${item.artists?.map(a => a.name).join(', ')}`
                     : item.type === 'album'
-                    ? `Album - ${item.artists?.map(a => a.name).join(', ')}`
-                    : 'Artist'
+                      ? `Album - ${item.artists?.map(a => a.name).join(', ')}`
+                      : 'Artist'
                 }
                 descriptionStyle={styles.description}
                 left={() =>
@@ -198,15 +212,15 @@ export default function SearchScreen() {
                       iconColor="white"
                     />
                   ) :
-                  item.type === 'album' ? (
-                    <IconButton
-                      icon="arrow-right"
-                      size={25}
-                      onPress={() => router.push({ pathname: '/album', params: { id: item.id } })}
-                      style={styles.addIcon}
-                      iconColor="white"
-                    />
-                  ) : null
+                    item.type === 'album' ? (
+                      <IconButton
+                        icon="arrow-right"
+                        size={25}
+                        onPress={() => router.push({ pathname: '/album', params: { id: item.id } })}
+                        style={styles.addIcon}
+                        iconColor="white"
+                      />
+                    ) : null
                 }
               />
             )}
@@ -250,6 +264,21 @@ export default function SearchScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Successful adding */}
+        <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
+          <View style={styles.modalWrap}>
+            <View style={styles.modalBoxSuccess}>
+              <IconButton
+                icon='check'
+                size={60}
+                iconColor='black'
+              />
+              <Text variant="titleLarge">Successfully Added!</Text>
+            </View>
+          </View>
+        </Modal>
+
       </ThemedView>
     </GestureHandlerRootView>
   );
@@ -294,7 +323,7 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     marginLeft: 16,
-    marginRight: 48,    
+    marginRight: 48,
   },
   name: {
     color: 'white',
@@ -305,7 +334,6 @@ const styles = StyleSheet.create({
   addIcon: {
     marginRight: 2,
   },
-
   modalWrap: {
     flex: 1,
     justifyContent: 'center',
@@ -323,5 +351,14 @@ const styles = StyleSheet.create({
   },
   input: {
     marginVertical: 12,
+  },
+  modalBoxSuccess: {
+    backgroundColor: 'white',
+    opacity: 0.7,
+    padding: 15,
+    borderRadius: 8,
+    width: '85%',
+    alignItems: 'center',
+    flexDirection: 'row'
   },
 });

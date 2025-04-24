@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image, FlatList, Pressable } from 'react-native';
-import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List, Icon } from 'react-native-paper';
+import { StyleSheet, View, Image, FlatList, Pressable, Modal } from 'react-native';
+import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
@@ -41,6 +41,9 @@ export default function PlaylistScreen() {
 
   const [editMode, setEditMode] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+
+  // Successful Adding Modal
+  const [successModal, setSuccessModal] = useState(false);
 
   
   // Load Playlist from Firebase
@@ -126,6 +129,7 @@ export default function PlaylistScreen() {
     setModalVisible(false);
     setSearchQuery('');
     setSearchResults([]);
+    setSuccessModal(true);
   };
 
   const removeSong = async (songToRemove: Song) => {
@@ -135,6 +139,15 @@ export default function PlaylistScreen() {
     await set(ref(database, `playlists/${playlistId}/songs`), updatedSongs);
     setConfirmRemoveVisible(false);
   }
+
+  // Successful Add Timed Popup
+  useEffect(() => {
+    if (successModal) {
+      const timer = setTimeout(() => {
+        setSuccessModal(false);
+      }, 500);
+    }
+  })
 
   if (loading) {
     return (
@@ -150,10 +163,6 @@ export default function PlaylistScreen() {
         <Text>Playlist not found.</Text>
       </ThemedView>
     );
-  }
-
-  const toggleExport = () => {
-
   }
 
   return (
@@ -224,7 +233,10 @@ export default function PlaylistScreen() {
               {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
               <IconButton
                 icon ="pencil"
-                onPress={()=>setEditMode(prev => !prev)}
+                onPress = { () => {
+                  setEditMode(prev => !prev);
+                  
+                } }
                 size={28}
                 iconColor="white"
               />
@@ -286,16 +298,29 @@ export default function PlaylistScreen() {
         style={styles.editIcon}
         iconColor="black"
       /> */}
-      {/* Add Song Button */}
-      <IconButton
+      {/* Add Song Button that is only visible when edit button is not active*/}
+      {!editMode && (<IconButton
         icon="plus-circle-outline"
         size={40}
         style={styles.addIcon}
         onPress={() => setModalVisible(true)}
-        iconColor='black'
-      />
+        iconColor='white'
+      />)
+      }
+
+      {/* Done Button that is only visible when edit button is active to end edit mode */}
+      {editMode && (<IconButton
+        icon="check-circle"
+        size={40}
+        style={styles.addIcon}
+        onPress={() => setEditMode(prev => !prev)}
+        iconColor='white'
+      />)
+      }
+
+
       {/* Search & Add Modal */}
-      <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)}>
+      <Modal visible={modalVisible} transparent onDismiss={() => setModalVisible(false)}>
         <View style={styles.modalContent}>
           <Searchbar
             placeholder="Search Spotify tracks"
@@ -331,7 +356,7 @@ export default function PlaylistScreen() {
           
         </View>
       </Modal>
-      <Modal visible={confirmRemoveVisible} onDismiss={() => setConfirmRemoveVisible(false)}>
+      <Modal visible={confirmRemoveVisible} transparent onDismiss={() => setConfirmRemoveVisible(false)}>
         <ThemedView style={styles.confirmModal}>
           <Text style={styles.confirmText}>
             Are you sure you want to remove{' '}
@@ -347,6 +372,20 @@ export default function PlaylistScreen() {
           </View>
         </ThemedView>
       </Modal>
+
+      {/* Successful adding */}
+      <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
+      <View style={styles.modalWrap}>
+        <View style={styles.modalBoxSuccess}>
+          <IconButton
+            icon='check'
+            size={60}
+            iconColor='black'
+          />
+          <Text variant="titleLarge">Successfully Added!</Text>
+        </View>
+      </View>
+    </Modal>
 
     </ThemedView>
   );
@@ -474,7 +513,9 @@ const styles = StyleSheet.create({
     padding: 30,
     margin: 40,
     borderRadius: 10,
+    top: 300,
     alignItems: 'center',
+    justifyContent: 'center'
   },
   confirmText: {
     fontSize: 16,
@@ -546,4 +587,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 20
   }, 
+  modalBoxSuccess: {
+    backgroundColor: 'white',
+    opacity: 0.7,
+    padding: 15,
+    borderRadius: 8,
+    width: '85%',
+    alignItems: 'center',
+    flexDirection: 'row'
+  },
+  modalWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalBox: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 8,
+    width: '85%',
+  },
 });
