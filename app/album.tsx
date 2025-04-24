@@ -86,7 +86,7 @@ export default function Album() {
           spotify_uri: selectedTrack.uri || '',
           duration_ms: selectedTrack.duration_ms || 0,
           cover_art: album?.images?.[0]?.url || 'placeholderCover',
-          album: selectedTrack.album?.name || '',
+          album: album?.name || '',
         };
         const updated = [...(plSnap.songs || []), newSong];
         await set(ref(database, `playlists/${plId}/songs`), updated);
