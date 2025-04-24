@@ -169,6 +169,7 @@ const AllPlaylists = () => {
               )}
             />
           )}
+          contentContainerStyle={{ paddingBottom: 100 }}
         />
       </GestureHandlerRootView>
 
