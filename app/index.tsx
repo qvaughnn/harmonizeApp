@@ -246,8 +246,9 @@ export default function HomeScreen() {
         icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>}
         style={styles.appleButton}
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}>
-        onPress={}
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}
+        
+        >
         LOG IN WITH APPLE MUSIC
       </Button>
     </ThemedView>
