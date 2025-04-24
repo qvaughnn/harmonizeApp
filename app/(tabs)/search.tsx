@@ -46,15 +46,36 @@ export default function SearchScreen() {
     const unsub = onValue(userRef, async (snap) => {
       if (!snap.exists()) { setUserPlaylists([]); return; }
       const ids = Object.keys(snap.val());
-      const list: PlaylistPreview[] = [];
-      for (const id of ids) {
-        const data = await new Promise<any>((resolve) => onValue(ref(database, `playlists/${id}`), s => resolve(s.val()), { onlyOnce: true }));
-        if (data) list.push({ id: data.id, name: data.name, cover_art: data.cover_art || placeholderCover });
-      }
+
+      // Create an array of Promises using get()
+      const promises = ids.map(id => get(ref(database, `playlists/${id}`)));
+
+      // Wait for all promises to resolve
+      const snapshots = await Promise.all(promises);
+
+      // Process the results
+      const list: PlaylistPreview[] = snapshots
+        .map(s => s.val()) // Get the data from each snapshot
+        .filter(data => data) // Filter out any null/non-existent playlists
+        .map(data => ({
+          id: data.id,
+          name: data.name,
+          cover_art: data.cover_art || placeholderCover
+        }));
+
       setUserPlaylists(list);
+      // const list: PlaylistPreview[] = [];
+      // for (const id of ids) {
+      //   const data = await new Promise<any>((resolve) => onValue(ref(database, `playlists/${id}`), s => resolve(s.val()), { onlyOnce: true }));
+      //   if (data) list.push({ id: data.id, name: data.name, cover_art: data.cover_art || placeholderCover });
+      // }
+      // setUserPlaylists(list);
     });
-    return () => unsub();
-  }, [currentUser]);
+    return () => {
+      unsub();
+      console.log('Search Page Playlists unmounted');
+    }
+  }, []);
 
   // Spotify search
   useEffect(() => {
@@ -111,9 +132,9 @@ export default function SearchScreen() {
 
   const addTrackToPlaylist = async (plId: string) => {
     if (!selectedTrack || selectedTrack.type !== 'track') return;
-    const plSnap = await new Promise<any>((res) => onValue(ref(database, `playlists/${plId}`), s => res(s.val()), { onlyOnce: true }));
+    const plSnap = await get(ref(database, `playlists/${plId}`));
     if (!plSnap) return;
-    if (plSnap.songs?.some((s: Song) => s.spotify_id === selectedTrack.id)) {
+    if (plSnap.val().songs?.some((s: Song) => s.spotify_id === selectedTrack.id)) {
       console.log('Song already exists in playlist');
       setPlaylistModal(false);
       return;
@@ -127,7 +148,7 @@ export default function SearchScreen() {
       cover_art: selectedTrack.album?.images[0]?.url || '',
       album: selectedTrack.album?.name || '',
     };
-    const updated = [...(plSnap.songs || []), newSong];
+    const updated = [...(plSnap.val().songs || []), newSong];
     await set(ref(database, `playlists/${plId}/songs`), updated);
     setPlaylistModal(false);
     setSelectedTrack(null);
