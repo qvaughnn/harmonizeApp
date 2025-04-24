@@ -5,8 +5,8 @@ import * as AuthSession from 'expo-auth-session';
 import { useEffect, useState } from 'react';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { ref, set } from "firebase/database";
-import { useAuth } from "../../contexts/AuthContext";
-import { app, database } from "../config/firebase";
+import { useAuth } from "../contexts/AuthContext";
+import { app, database } from "./config/firebase";
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
@@ -147,7 +147,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.overall}>
       <Image
-          source={require('@/assets/images/logoTest.png')}
+          source={require('@/assets/images/fadeIn.png')}
           style={styles.reactLogo}
       />
       <Button 
@@ -176,12 +176,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reactLogo: {
-    height: 330,
-    width: 800,
-    bottom: 0,
-    left: 0,
-    marginVertical: 20,
-    resizeMode: 'contain'
+    height: '50%',
+    width: '100%',
+    // resizeMode: 'contain'
   },
   spotifyButton: {
     backgroundColor: '#1BB954',

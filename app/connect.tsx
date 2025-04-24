@@ -172,7 +172,7 @@ export default function ConnectScreen() {
   return (
     <ThemedView style={styles.overall}>
       <Image
-        source={require('@/assets/images/logoTest.png')}
+        source={require('@/assets/images/fadeIn.png')}
         style={styles.reactLogo}
       />
       <Button
@@ -203,12 +203,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reactLogo: {
-    height: 330,
-    width: 800,
-    bottom: 0,
-    left: 0,
-    marginVertical: 20,
-    resizeMode: 'contain'
+    height: '50%',
+    width: '100%',
   },
   spotifyButton: {
     backgroundColor: '#1BB954',
