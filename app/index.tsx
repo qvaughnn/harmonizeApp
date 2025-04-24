@@ -247,6 +247,7 @@ export default function HomeScreen() {
         style={styles.appleButton}
         mode="elevated"
         labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}>
+        onPress={}
         LOG IN WITH APPLE MUSIC
       </Button>
     </ThemedView>
