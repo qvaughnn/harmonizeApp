@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image, FlatList, Pressable, Modal } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, View, Image, FlatList, Pressable, Modal, Animated } from 'react-native';
 import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,7 +45,27 @@ export default function PlaylistScreen() {
   // Successful Adding Modal
   const [successModal, setSuccessModal] = useState(false);
 
-  
+  // Pin playlist name when scrolling
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const titleFontSize = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [35, 20],
+    extrapolate: 'clamp',
+  });
+
+  const titleTopOffset = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [0, -20],
+    extrapolate: 'clamp',
+  });
+
+  const headerBackgroundOpacity = scrollY.interpolate({
+    inputRange: [40, 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   // Load Playlist from Firebase
   useEffect(() => {
     if (!playlistId) return;
@@ -167,10 +187,35 @@ export default function PlaylistScreen() {
 
   return (
     <ThemedView style={styles.overall}>
-      <FlatList
+
+    <Animated.View
+      style={[
+        styles.floatingTitleContainer,
+        {
+          transform: [{ translateY: titleTopOffset }],
+        },
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.floatingTitleBackground,
+          { opacity: headerBackgroundOpacity },
+        ]}
+      />
+      <Animated.Text style={[styles.floatingTitleText, { fontSize: titleFontSize }]}>
+        {playlist.name}
+      </Animated.Text>
+    </Animated.View>
+
+      <Animated.FlatList
         data={playlist.songs}
         keyExtractor={(item, index) => `${item.spotify_id}_${index}`}
         contentContainerStyle={styles.trackList}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
         ListHeaderComponent={(
         <View>
           
@@ -182,9 +227,6 @@ export default function PlaylistScreen() {
               style={styles.backButton}
               iconColor="grey"
             />
-            <Text style={styles.playlistTitle}>
-              {playlist.name}
-            </Text>
           </View>
 
           <View style={styles.coverContainer}>
@@ -607,5 +649,31 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 8,
     width: '85%',
+  },
+  floatingTitleContainer: {
+    position: 'absolute',
+    top: 0, // goes behind status bar
+    left: 0,
+    right: 0,
+    zIndex: 999,
+    alignItems: 'center',
+    justifyContent: 'flex-end', // push text downward
+    height: 110, // or whatever height gives you room to breathe
+    pointerEvents: 'none', // lets you interact with stuff behind it
+  },
+  floatingTitleText: {
+    color: 'white',
+    fontWeight: 'bold',
+    paddingTop: 40, // adds space below status bar
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+  },
+  floatingTitleBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(150, 144, 144, 0.8)', // semi-transparent black
   },
 });
