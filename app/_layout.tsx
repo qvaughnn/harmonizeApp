@@ -28,6 +28,7 @@ function RootNav() {
       <Stack.Screen name="friendProfile" />
       <Stack.Screen name="playlist" />
       <Stack.Screen name="playlistImport" />
+      <Stack.Screen name="connect" />
     </Stack>
   );
 }

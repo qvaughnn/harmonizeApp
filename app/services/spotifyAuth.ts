@@ -1,10 +1,12 @@
 // src/services/spotifyAuth.ts
 import { app, database } from "../config/firebase";
-import { ref, set } from "firebase/database";
+import { ref, set, update } from "firebase/database";
+import { useAuth } from "../../contexts/AuthContext";
 
 const CLIENT_ID = "9c9e9ac635c74d33b4cec9c1e6878ede";
 
-export const refreshSpotifyToken = async (spotifyUserId: string, refreshToken: string): Promise<string | null> => {
+export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: string): Promise<string | null> => {
+  const { setToken } = useAuth();
   try {
     const params = new URLSearchParams({
       client_id: CLIENT_ID,
@@ -23,16 +25,19 @@ export const refreshSpotifyToken = async (spotifyUserId: string, refreshToken: s
       console.error("Error refreshing token:", tokenData);
       return null;
     }
+    const accessToken = tokenData.access_token;
+    console.log("Refreshed Spotify Token:", accessToken);
 
-    console.log("Refreshed Spotify Token:", tokenData.access_token);
+    //Update Context
+    setToken(accessToken);
 
     // Update Firebase Realtime Database
-    const userRef = ref(database, `users/${spotifyUserId}`);
-    await set(userRef, {
-      spotifyAccessToken: tokenData.access_token,
+    const userRef = ref(database, `users/${firebaseUid}/Spotify`);
+    await update(userRef, {
+      accessToken: tokenData.accessToken,
       expiresAt: Date.now() + tokenData.expires_in * 1000,
-      // You might want to retain the refresh token too if it's provided
     });
+
 
     return tokenData.access_token;
   } catch (error) {
