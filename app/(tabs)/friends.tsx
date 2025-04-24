@@ -4,7 +4,8 @@ import { Text, TextInput, Button, Searchbar, Avatar, Card } from 'react-native-p
 import React, { useEffect, useState } from 'react';
 import { app, database } from "../config/firebase";
 import { useAuth } from '../../contexts/AuthContext';
-import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
+// import {User} from '@/types';
+// import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
 
 // returns true if successful and false if not
