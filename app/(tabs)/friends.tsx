@@ -1,8 +1,10 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, ScrollView} from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { Text, TextInput, Button, Searchbar, Avatar, Card } from 'react-native-paper';
-import * as React from 'react';
+import React, { useEffect, useState } from 'react';
 import { app, database } from "../config/firebase";
+import { useAuth } from '../../contexts/AuthContext';
+import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
 
 // returns true if successful and false if not
@@ -139,25 +141,45 @@ export async function getSentFriendRequests(userId: string): Promise<string[]> {
   }
 }
 
-export default function TabTwoScreen() {
+const Friends = () => {
 
-
+  const { currentUser } = useAuth(); 
+  const id = currentUser.id;
+  // console.log('🟢 current friends:', getFriends(id));
   const [searchQuery, setSearchQuery] = React.useState('');
   function handleSearchQueryChange(query: string): void {
     setSearchQuery(query);
   }
 
+  
+  const [friends, setFriends] = useState<string[]>([]);
+  const [received, setReceived] = React.useState<string[]>([]);
+  const [sent, setSent] = React.useState<string[]>([]);
 
-  /*
-    This is just a hardcoded example for the friends page
-  */
-  const friends = [
-    { name: 'Alice', playlists: 4, avatar: require('../../assets/images/avatar.png') },
-    { name: 'Charlie', playlists: 2, avatar: require('../../assets/images/avatar.png') },
-    { name: 'Lucy', playlists: 8, avatar: require('../../assets/images/avatar.png') },
-    { name: 'Julie', playlists: 5, avatar: require('../../assets/images/avatar.png') },
-    { name: 'Cameron', playlists: 3, avatar: require('../../assets/images/avatar.png') }
-  ]
+  useEffect(() => {
+    setFriends(getFriends(id));
+  }, [currentUser]);
+
+  useEffect(() => {
+    console.log('friends updated:', friends);
+  }, [friends]);
+
+  useEffect(() => {
+    setReceived(getReceivedFriendRequests(id));
+  }, [currentUser]);
+
+  useEffect(() => {
+    console.log('recieved updated:', friends);
+  }, [received]);
+
+
+  const handleAccept = async (requester: string) => {
+    await acceptFriendRequest(id, requester);
+  };
+
+  const handleDecline = async (requester: string) => {
+    await declineFriendRequest(id, requester);
+  };
 
 
   return (
@@ -173,23 +195,70 @@ export default function TabTwoScreen() {
           style={styles.searchbar}
         />
       </View>
-      <View style={styles.listContainer}>
+      <Text variant="headlineMedium" style={styles.requests}>
+          Friend Requests
+        </Text>
+
+      <Text variant="headlineMedium" style={styles.yourFriends}>
+          Your Friends
+        </Text>
+
+      {/* <View style={styles.listContainer}>
         {friends.map((friend, index) => (
           <Card key={index} style={styles.friendCard}>
             <View style={styles.friendInfo}>
-              <Avatar.Image size={40} source={friend.avatar} />
               <View style={styles.textContainer}>
                 <Text style={styles.friendName}> {friend.name}</Text>
-                <Text style={styles.playlistText}> {friend.playlists} playlists</Text>
               </View>
             </View>
           </Card>
         ))}
-      </View>
+      </View> */}
+      {/* <ScrollView contentContainerStyle={styles.listContainer}> */}
+        {/* {friends.map((friendId) => (
+          <Card key={friendId} style={styles.friendCard}>
+            <Card.Content style={styles.friendCard}>
+              <Avatar.Text size={40} label={friendId.charAt(0).toUpperCase()} />
+              <Text style={styles.friendName}>{friendId}</Text>
+            </Card.Content>
+          </Card>
+        ))} */}
+        {/* <Text variant="headlineSmall" style={styles.subheader}>
+          Incoming Requests
+        </Text>
+        {received.map((req) => (
+          <Card key={req} style={styles.card}>
+            <Card.Content style={styles.cardContent}>
+              <Avatar.Text size={40} label={req.charAt(0).toUpperCase()} />
+              <Text style={styles.cardText}>{req}</Text>
+            </Card.Content>
+            <Card.Actions>
+              <Button onPress={() => handleAccept(req)}>Accept</Button>
+              <Button onPress={() => handleDecline(req)}>Decline</Button>
+            </Card.Actions>
+          </Card>
+        ))} */}
+
+        {/* <Text variant="headlineSmall" style={styles.subheader}>
+          Sent Requests
+        </Text>
+        {sent.map((req) => (
+          <Card key={req} style={styles.card}>
+            <Card.Content style={styles.cardContent}>
+              <Avatar.Text size={40} label={req.charAt(0).toUpperCase()} />
+              <Text style={styles.cardText}>{req}</Text>
+            </Card.Content>
+            <Card.Actions>
+              <Button onPress={() => handleCancel(req)}>Cancel</Button>
+            </Card.Actions>
+          </Card>
+        ))} */}
+      {/* </ScrollView> */}
     </ThemedView>
   );
 }
 
+export default Friends;
 
 const styles = StyleSheet.create({
   overall: {
@@ -243,8 +312,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white'
   },
-  playlistText: {
-    fontSize: 14,
-    color: 'white'
+  // playlistText: {
+  //   fontSize: 14,
+  //   color: 'white'
+  // },
+  yourFriends: {
+    fontWeight: 'bold',
+    color: 'darkgrey',
+    position: 'absolute',
+    top: 480,
+    left: 25,
+    justifyContent: 'flex-start',
+  },
+  requests: {
+    fontWeight: 'bold',
+    color: 'darkgrey',
+    position: 'absolute',
+    top: 230,
+    left: 25,
+    justifyContent: 'flex-start',
   },
 });
