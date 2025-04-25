@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (Date.now() >= userData.expiresAt) {
           console.log("Token expired, refreshing...");
           const newToken = await refreshSpotifyToken(spotifyUserId, userData.spotifyRefreshToken);
-          setToken(newToken);
         } else {
           setToken(userData.spotifyAccessToken);
         }
