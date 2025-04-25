@@ -14,12 +14,14 @@ export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: str
       client_id: CLIENT_ID,
     });
 
+    const body = params.toString();
+
     const payload = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: params
+      body,
     };
     console.log('Payload body:', params);
     console.log('Payload body as string:', params.toString());

@@ -52,16 +52,16 @@ export default function Authentication() {
               console.log("Token expired, attempting refresh")
               // Token is expired, refresh it
               try {
-                router.replace('/connect');
-                // setToken(await refreshSpotifyToken(userCredential.user.uid, spotifyData.refreshToken));
-                // console.log("Spotify token refresh completed");
+                // router.replace('/connect');
+                setToken(await refreshSpotifyToken(userCredential.user.uid, spotifyData.refreshToken));
+                console.log("Spotify token refresh completed");
               } catch (error) {
                 console.error("Error refreshing token:", error);
               }
             }
             console.log("Now going to home")
             // Navigate to home page
-            // router.replace('/(tabs)/home');
+            router.replace('/(tabs)/home');
           } else {
             // No music service connected yet
             console.log("No music service connected yet")
