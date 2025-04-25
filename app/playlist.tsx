@@ -313,7 +313,12 @@ export default function PlaylistScreen() {
             )}
           />
      {/* Export Modal */}
-     <Modal visible={exportVisible} onDismiss={() => setExportVisible(false)}>
+     <Modal 
+      visible={exportVisible}
+      transparent = {true}
+      animationType='fade'
+      onDismiss={() => setExportVisible(false)}>
+      <View style={styles.exportWrap}>
        <View style={styles.exportContent}>
          <Pressable>
            <Text style={styles.exportText}>
@@ -325,12 +330,15 @@ export default function PlaylistScreen() {
              Export to Apple Music
            </Text>
          </Pressable>
+        <View style={ {marginTop: 10, alignItems: 'center'} }>
          <Pressable onPress={() => setExportVisible(false)}>
            <Text style={styles.exportClose}>
              Cancel
            </Text>
          </Pressable>
+        </View>
        </View>
+      </View>
      </Modal>
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
@@ -611,15 +619,24 @@ const styles = StyleSheet.create({
     fontWeight: 'regular',
     marginLeft: 20,
   },
+  exportWrap: {
+    position: 'absolute',
+    top: 400, // or wherever you want it to appear
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
   exportContent: {
     backgroundColor: 'white',
     padding: 20,
-    margin: 10,
-    borderRadius: 8,
-    height: '55%',
-    width: '70%',
-    top: 70,
-    alignSelf: 'center',
+    borderRadius: 10,
+    width: '80%',
+    elevation: 5, // for shadow on Android
+    shadowColor: '#000', // for shadow on iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   exportText: {
     fontSize: 20,
@@ -627,7 +644,7 @@ const styles = StyleSheet.create({
   },
   exportClose: {
     fontSize: 15,
-    marginBottom: 20
+    marginBottom: 20,
   }, 
   modalBoxSuccess: {
     backgroundColor: 'white',
@@ -642,7 +659,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalBox: {
     backgroundColor: 'white',
