@@ -50,6 +50,13 @@ const Profile = () => {
       />
       <Text style={styles.username} variant="headlineMedium">@{userData?.display_name || "username"}</Text>
       <Button
+        icon="plus"
+        style={styles.importButton}
+        mode="elevated"
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}>
+          Import Playlist
+      </Button>
+      <Button
         icon="close"
         style={styles.logOutButton}
         mode="elevated"
@@ -85,6 +92,11 @@ const styles = StyleSheet.create({
     top: 350,
     color: 'white',
   },
+  importButton:{
+    backgroundColor: 'grey',
+    position: 'absolute',
+
+  },
   logOutButton:{
     backgroundColor: 'grey',
     paddingVertical: 4,
@@ -96,5 +108,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     marginVertical: 6,
+    top: 70,
   },
 });
