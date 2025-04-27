@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Modal, ScrollView, FlatList } from 'react-native';
 import { Searchbar, List, IconButton, Button, TextInput, Text, ActivityIndicator } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { ref, onValue, set, push, get } from 'firebase/database';
 import { database } from './config/firebase';
@@ -33,7 +33,7 @@ export default function Album() {
     const [newModal, setNewModal] = useState(false);
     const [newName, setNewName] = useState('');
     const placeholderCover = require('../assets/images/coverSample.png');
-
+    const router = useRouter();
 // Load user playlists
 useEffect(() => {
   if (!currentUser?.id) return;
@@ -145,10 +145,19 @@ useEffect(() => {
             <ScrollView style={styles.scrollContainer}>
                 {album && (
                     <View style={styles.header}>
-                    <Text style={styles.albumTitle}>{album.name}</Text>
+                      <View style={styles.headerRow}>
+                        <IconButton
+                            icon="arrow-left"
+                            size={30}
+                            style={styles.backButton}
+                            iconColor="grey"
+                            onPress={() => router.back()}
+                        />
+                      <Text style={styles.albumTitle}>{album.name}</Text>
+                    </View>
                     <Image source={{ uri: album.images[0]?.url }} style={styles.cover} />
                     <Text style={styles.artist}>{album.artists.map((a: any) => a.name).join(', ')}</Text>
-                    </View>
+                  </View>
                 )}
 
                 <View>
@@ -284,6 +293,19 @@ useEffect(() => {
               },
               input: {
                 marginVertical: 12,
+              },
+              headerContainer: {
+                flexDirection: 'row',
+              },
+              backButton: {
+                // marginLeft: 10,
+              },
+              headerRow: {
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                width: '100%',
+                marginBottom: 20,
               },
 
 });
