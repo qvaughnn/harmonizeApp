@@ -241,6 +241,15 @@ export default function SearchScreen() {
                         style={styles.addIcon}
                         iconColor="white"
                       />
+                    ) :
+                    item.type === 'artist' ? (
+                      <IconButton
+                        icon="arrow-right"
+                        size={25}
+                        onPress={() => router.push({ pathname: '/artist', params: { id: item.id } })}
+                        style={styles.addIcon}
+                        iconColor="white"
+                      />
                     ) : null
                 }
               />
