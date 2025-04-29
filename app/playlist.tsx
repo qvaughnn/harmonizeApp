@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 import { database } from './config/firebase';
-import { ref, onValue, set, push } from 'firebase/database';
+import { ref, onValue, set, get, update } from 'firebase/database';
 import { Playlist, Song, UserRef } from '@/types';
 
 // Local type for Spotify track search results
@@ -13,13 +13,159 @@ type SpotifyTrack = {
   id: string;
   name: string;
   artists: { name: string }[];
-  album: { 
+  album: {
     name: string;
-    images: { url: string }[] 
+    images: { url: string }[]
   };
   uri: string;
   duration_ms: number;
 };
+
+// Export given playlist to Spotify
+async function exportToSpotify(playlist: string, token: string) {
+  try {
+    console.log('Exporting playlist:', playlist);
+    const playlistRef = ref(database, `playlists/${playlist}`);
+    const snapshot = await get(playlistRef);
+
+    const playlistSongsRef = ref(database, `playlists/${playlist}/songs`);
+    const snapshotSongs = await get(playlistSongsRef);
+
+    if (!snapshot.exists()) {
+      console.error('Playlist not found');
+      return;
+    }
+
+    let playlistId = await createSpotifyPlaylist(
+      token,
+      await getCurrentUserId(token),
+      snapshot.val().name,
+      snapshot.val().description,
+    )
+
+    const songsData = snapshotSongs.val();
+
+    let songUris: string[] = [];
+    let missingSongs: string[] = [];
+    for (const [songKey, song] of Object.entries(songsData)) {
+      console.log('Song number (key):', songKey);
+      console.log('Song data:', song);
+
+      if (song && (song as any).spotify_uri) {
+        songUris.push((song as any).spotify_uri);
+      } else {
+        const bestMatch = await getBestSpotifyMatch({
+          name: (song as any).name,
+          artists: (song as any).artist.split(', '),
+          durationMs: (song as any).duration_ms,
+          token,
+        });
+
+        if (bestMatch) {
+          songUris.push(bestMatch);
+          console.log('Best match found:', bestMatch);
+
+          const newSongRef = ref(database, `playlists/${playlist}/songs/${songKey}`);
+          await update(newSongRef, {
+            spotify_uri: bestMatch,
+          }); // Update the song with the Spotify URI
+
+        } else {
+          missingSongs.push(`${(song as any).name} - ${(song as any).artist}`);
+          console.log('No match found for song:', (song as any).name);
+        }
+      }
+
+      if (songUris.length > 99) {
+        console.log('Adding tracks to Spotify playlist:', songUris);
+        await addTracksToSpotifyPlaylist(token, playlistId, songUris);
+        songUris = []; // Reset after adding
+      }
+    }
+
+    if (songUris.length > 0) {
+      console.log('Adding remaining tracks to Spotify playlist:', songUris);
+      await addTracksToSpotifyPlaylist(token, playlistId, songUris);
+    }
+
+    console.log('The following songs were not found on Spotify:', missingSongs.join(', '));
+    return playlistId; // Return the playlist ID
+
+  } catch (error) {
+    console.error('Error exporting to Spotify:', error);
+  }
+}
+
+// returns playlist id
+async function createSpotifyPlaylist(
+  accessToken: string,
+  userId: string,
+  playlistName: string,
+  playlistDescription: string = '',
+  isPublic: boolean = false
+): Promise<any> {
+  const url = `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: playlistName,
+      description: playlistDescription,
+      public: isPublic,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Failed to create playlist: ${errorData.error.message}`);
+  }
+
+  const data = await response.json();
+  return data.id;
+}
+
+async function addTracksToSpotifyPlaylist(
+  accessToken: string,
+  playlistId: string,
+  trackUris: string[]
+): Promise<void> {
+  const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      uris: trackUris,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Failed to add tracks: ${errorData.error.message}`);
+  }
+}
+
+async function getCurrentUserId(accessToken: string): Promise<string> {
+  const response = await fetch('https://api.spotify.com/v1/me', {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch user info');
+  }
+
+  const data = await response.json();
+  return data.id;
+}
 
 // covers random punctuation cases when converting
 function normalizeTitle(title: string): string {
@@ -265,17 +411,52 @@ export default function PlaylistScreen() {
 
   const testMatch = async () => {
     try {
-      const result = await getBestAppleMusicMatch({
+      const result = await getBestSpotifyMatch({
         name: "Pink Pony Club",
         artists: ["Chappell Roan"],
         durationMs: 258000,
-        token: 'redacted',
+        token: token || '',
       });
       console.log("token:", token)
 
       console.log("Spotify Match Result:", result);
     } catch (err) {
       console.error("Error in testMatch:", err);
+    }
+  };
+
+  const testExport = async () => {
+    if (!playlistId || !token) return;
+
+    try {
+      // ✅ First, clear all spotify_id and spotify_uri fields
+      const testPlaylist = '-OOzVqabOILUGvMNWy4x';
+      const playlistSongsRef = ref(database, `playlists/${testPlaylist}/songs`);
+      const snapshot = await get(playlistSongsRef);
+
+      if (!snapshot.exists()) {
+        console.error('Playlist not found');
+        return;
+      }
+
+      const updates: { [key: string]: null } = {};
+
+      for (const [songKey, song] of Object.entries(snapshot.val())) {
+        if (song) {
+          updates[`playlists/${testPlaylist}/songs/${songKey}/spotify_id`] = null;
+          updates[`playlists/${testPlaylist}/songs/${songKey}/spotify_uri`] = null;
+        }
+      }
+
+      await update(ref(database), updates);
+      console.log("Cleared spotify_id and spotify_uri fields!");
+
+      // ✅ Now run exportToSpotify AFTER clearing
+      await exportToSpotify(testPlaylist, token);
+      console.log("Export successful!");
+
+    } catch (error) {
+      console.error("Export failed:", error);
     }
   };
 
@@ -350,7 +531,7 @@ export default function PlaylistScreen() {
   return (
     <ThemedView style={styles.overall}>
       <View style={styles.headerContainer}>
-      <Button title="Test Spotify Match" onPress={testMatch} />
+        <Button title="Test Spotify Match" onPress={testExport} />
         <IconButton
           icon="arrow-left"
           size={30}
@@ -376,12 +557,12 @@ export default function PlaylistScreen() {
         )}
         <View>
           <Text style={styles.owner}>
-            Owner: { (playlist.owner as UserRef).name }
+            Owner: {(playlist.owner as UserRef).name}
             {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
           </Text>
           {playlist.description ? (
             <Text style={styles.description}>{playlist.description}</Text>
-          ) : null} 
+          ) : null}
         </View>
 
         <Pressable onPress={() => router.push('/friends')}>
@@ -389,7 +570,7 @@ export default function PlaylistScreen() {
         </Pressable>
 
       </View>
-      
+
       <FlatList
         data={playlist.songs}
         keyExtractor={(item, index) => `${item.spotify_id}_${index}`}
@@ -545,24 +726,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'flex-start',
   },
-   addIcon: { 
-    position: 'absolute', 
-    right: 20, 
-    bottom: 20 
+  addIcon: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20
   },
-   modalContent: { 
-    backgroundColor: 'white', 
-    padding: 20, 
-    margin: 20, 
-    borderRadius: 8 
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    margin: 20,
+    borderRadius: 8
   },
-   searchbar: { 
-    marginBottom: 10 
+  searchbar: {
+    marginBottom: 10
   },
-   thumbnail: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 4, 
-    marginRight: 8 
+  thumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    marginRight: 8
   },
 });
