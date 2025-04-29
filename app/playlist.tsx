@@ -22,7 +22,7 @@ type SpotifyTrack = {
 };
 
 // Export given playlist to Apple Music
-async function exportToAppleMusic(playlistId: string, developerToken: string, musicUserToken: string) {
+async function exportToAppleMusic(playlistId: string, developerToken: string, musicUserToken: string): Promise<string[]> {
   try {
     console.log('Exporting playlist to Apple Music:', playlistId);
     const playlistRef = ref(database, `playlists/${playlistId}`);
@@ -33,7 +33,7 @@ async function exportToAppleMusic(playlistId: string, developerToken: string, mu
 
     if (!snapshot.exists()) {
       console.error('Playlist not found');
-      return;
+      return [];
     }
 
     // Create a new empty Apple Music playlist
@@ -90,10 +90,11 @@ async function exportToAppleMusic(playlistId: string, developerToken: string, mu
     }
 
     console.log('The following songs were not found on Apple Music:', missingSongs.join(', '));
-    return newPlaylistId;
+    return missingSongs;
 
   } catch (error) {
     console.error('Error exporting to Apple Music:', error);
+    return [];
   }
 }
 
@@ -152,8 +153,8 @@ async function addTracksToAppleMusicPlaylist(developerToken: string, musicUserTo
   }
 }
 
-// Export given playlist to Spotify
-async function exportToSpotify(playlist: string, token: string) {
+// Export given playlist to Spotify and returns missing songs as an array of strings
+async function exportToSpotify(playlist: string, token: string): Promise<string[]> {
   try {
     console.log('Exporting playlist:', playlist);
     const playlistRef = ref(database, `playlists/${playlist}`);
@@ -164,7 +165,7 @@ async function exportToSpotify(playlist: string, token: string) {
 
     if (!snapshot.exists()) {
       console.error('Playlist not found');
-      return;
+      return [];
     }
 
     let playlistId = await createSpotifyPlaylist(
@@ -221,10 +222,11 @@ async function exportToSpotify(playlist: string, token: string) {
     }
 
     console.log('The following songs were not found on Spotify:', missingSongs.join(', '));
-    return playlistId; // Return the playlist ID
+    return missingSongs;
 
   } catch (error) {
     console.error('Error exporting to Spotify:', error);
+    return [];
   }
 }
 
