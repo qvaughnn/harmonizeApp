@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, ScrollView} from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text, TextInput, Button, Searchbar, Avatar, Card } from 'react-native-paper';
+import { Text, TextInput, Button, Searchbar, Avatar, Card, IconButton, Portal, Modal} from 'react-native-paper';
 import React, { useEffect, useState } from 'react';
 import { app, database } from "../config/firebase";
 import { useAuth } from '../../contexts/AuthContext';
@@ -145,33 +145,31 @@ export async function getSentFriendRequests(userId: string): Promise<string[]> {
 const Friends = () => {
 
   const { currentUser } = useAuth(); 
-  const id = currentUser?.id;
-  // console.log('🟢 current friends:', getFriends(id));
-  const [searchQuery, setSearchQuery] = React.useState('');
-  function handleSearchQueryChange(query: string): void {
-    setSearchQuery(query);
-  }
-
+  const id = currentUser!.id;
+  console.log('friends at load:', getFriends(id));
   
   const [friends, setFriends] = useState<string[]>([]);
   const [received, setReceived] = React.useState<string[]>([]);
   const [sent, setSent] = React.useState<string[]>([]);
 
-  useEffect(() => {
-    setFriends(getFriends(id));
-  }, [currentUser]);
+  const [addVisible, setAddVisible] = useState(false);
+  const [newFriendId, setNewFriendId] = useState('');
 
-  useEffect(() => {
-    console.log('friends updated:', friends);
-  }, [friends]);
+  // useEffect(() => {
+  //   setFriends(getFriends(id));
+  // }, [currentUser]);
 
-  useEffect(() => {
-    setReceived(getReceivedFriendRequests(id));
-  }, [currentUser]);
+  // useEffect(() => {
+  //   console.log('friends updated:', friends);
+  // }, [friends]);
 
-  useEffect(() => {
-    console.log('recieved updated:', friends);
-  }, [received]);
+  // useEffect(() => {
+  //   setReceived(getReceivedFriendRequests(id));
+  // }, [currentUser]);
+
+  // useEffect(() => {
+  //   console.log('recieved updated:', friends);
+  // }, [received]);
 
 
   const handleAccept = async (requester: string) => {
@@ -182,20 +180,25 @@ const Friends = () => {
     await declineFriendRequest(id, requester);
   };
 
+  const openAdd = () => setAddVisible(true);
+
+  const closeAdd = () => {
+    setNewFriendId('');
+    setAddVisible(false);
+  };
+
+  const handleAdd = () => {
+    addFriend(id, newFriendId);
+    console.log('friend added:', newFriendId);
+    closeAdd();
+  }
 
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
         FRIENDS
       </Text>
-      {/* <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder="Search Friends"
-          value={searchQuery}
-          onChangeText={handleSearchQueryChange}
-          style={styles.searchbar}
-        />
-      </View> */}
+
       <Text style={styles.code}>
         Share your unique code with others to collaborate:
       </Text>
@@ -208,20 +211,8 @@ const Friends = () => {
           Friend Requests
       </Text>
 
-      <Text variant="headlineMedium" style={styles.yourFriends}>
-          Your Friends
-      </Text>
-
-      <Button 
-        mode="contained" 
-        onPress={() => console.log("hi")} 
-        style={styles.addButton}
-        labelStyle={styles.addButtonText}>
-        Add
-      </Button>
-
-      {/* <View style={styles.listContainer}>
-        {friends.map((friend, index) => (
+      <ScrollView>
+        {/* {recieved.map((friend, index) => (
           <Card key={index} style={styles.friendCard}>
             <View style={styles.friendInfo}>
               <View style={styles.textContainer}>
@@ -229,48 +220,60 @@ const Friends = () => {
               </View>
             </View>
           </Card>
-        ))}
-      </View> */}
-      {/* <ScrollView contentContainerStyle={styles.listContainer}> */}
-        {/* {friends.map((friendId) => (
-          <Card key={friendId} style={styles.friendCard}>
-            <Card.Content style={styles.friendCard}>
-              <Avatar.Text size={40} label={friendId.charAt(0).toUpperCase()} />
-              <Text style={styles.friendName}>{friendId}</Text>
-            </Card.Content>
-          </Card>
         ))} */}
-        {/* <Text variant="headlineSmall" style={styles.subheader}>
-          Incoming Requests
-        </Text>
-        {received.map((req) => (
-          <Card key={req} style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <Avatar.Text size={40} label={req.charAt(0).toUpperCase()} />
-              <Text style={styles.cardText}>{req}</Text>
-            </Card.Content>
-            <Card.Actions>
-              <Button onPress={() => handleAccept(req)}>Accept</Button>
-              <Button onPress={() => handleDecline(req)}>Decline</Button>
-            </Card.Actions>
-          </Card>
-        ))} */}
+      </ScrollView>
 
-        {/* <Text variant="headlineSmall" style={styles.subheader}>
-          Sent Requests
-        </Text>
-        {sent.map((req) => (
-          <Card key={req} style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <Avatar.Text size={40} label={req.charAt(0).toUpperCase()} />
-              <Text style={styles.cardText}>{req}</Text>
-            </Card.Content>
-            <Card.Actions>
-              <Button onPress={() => handleCancel(req)}>Cancel</Button>
-            </Card.Actions>
+      <Text variant="headlineMedium" style={styles.yourFriends}>
+          Your Friends
+      </Text>
+
+      <Button 
+        mode="contained" 
+        onPress={openAdd} 
+        style={styles.addButton}
+        labelStyle={styles.addButtonText}>
+        Add
+      </Button>
+
+      <View style={styles.modalView}>
+        <Modal
+          visible={addVisible}
+          // onDismiss={closeAdd}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <IconButton
+            icon="close"
+            size={24}
+            onPress={closeAdd}
+            style={styles.closeIcon}
+          />
+          <Text style={styles.modalTitle}>Add a Friend</Text>
+          <TextInput
+            label="Friend’s User ID"
+            value={newFriendId}
+            onChangeText={setNewFriendId}
+            style={styles.input}
+          />
+          <Button
+            mode="contained"
+            onPress={handleAdd}
+            style={styles.confirmButton}
+          >
+            Add
+          </Button>
+        </Modal>
+      </View>
+      <ScrollView>
+        {/* {friends.map((friend, index) => (
+          <Card key={index} style={styles.friendCard}>
+            <View style={styles.friendInfo}>
+              <View style={styles.textContainer}>
+                <Text style={styles.friendName}> {friend.name}</Text>
+              </View>
+            </View>
           </Card>
         ))} */}
-      {/* </ScrollView> */}
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -291,14 +294,6 @@ const styles = StyleSheet.create({
     top: 80,
     left: 25,
     justifyContent: 'flex-start',
-  },
-  searchContainer: {
-    marginTop: 100,
-    width: '90%'
-  },
-  searchbar: {
-    width: '100%',
-    marginBottom: 30,
   },
   listContainer: {
     width: '100%',
@@ -371,7 +366,7 @@ const styles = StyleSheet.create({
   addButton: {
     width: 100,
     height: 45, 
-    top: 335,
+    top: 7,
     left: 120,
     backgroundColor: '#C39BD3',
     justifyContent: 'center',
@@ -381,5 +376,34 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 20
-  }
+  },
+  modalView: {
+    right: '35%',
+    bottom: 100
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 8,
+    padding: 20,
+    height: 250,
+    width: 250,
+  },
+  closeIcon: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  input: {
+    marginBottom: 16,
+  },
+  confirmButton: {
+    borderRadius: 6,
+  },
 });
