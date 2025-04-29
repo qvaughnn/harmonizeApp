@@ -21,6 +21,137 @@ type SpotifyTrack = {
   duration_ms: number;
 };
 
+// Export given playlist to Apple Music
+async function exportToAppleMusic(playlistId: string, developerToken: string, musicUserToken: string) {
+  try {
+    console.log('Exporting playlist to Apple Music:', playlistId);
+    const playlistRef = ref(database, `playlists/${playlistId}`);
+    const snapshot = await get(playlistRef);
+
+    const playlistSongsRef = ref(database, `playlists/${playlistId}/songs`);
+    const snapshotSongs = await get(playlistSongsRef);
+
+    if (!snapshot.exists()) {
+      console.error('Playlist not found');
+      return;
+    }
+
+    // Create a new empty Apple Music playlist
+    const newPlaylistId = await createAppleMusicPlaylist(
+      developerToken,
+      musicUserToken,
+      snapshot.val().name,
+      snapshot.val().description,
+    );
+
+    const songsData = snapshotSongs.val();
+
+    let songIds: string[] = [];
+    let missingSongs: string[] = [];
+
+    for (const [songKey, song] of Object.entries(songsData)) {
+      console.log('Song number (key):', songKey);
+      console.log('Song data:', song);
+
+      if (song && (song as any).apple_music_id) {
+        songIds.push((song as any).apple_music_id);
+      } else {
+        const bestMatch = await getBestAppleMusicMatch({
+          name: (song as any).name,
+          artists: (song as any).artist.split(', '),
+          durationMs: (song as any).duration_ms,
+          token: developerToken, // use **developer token** here
+        });
+
+        if (bestMatch) {
+          songIds.push(bestMatch);
+          console.log('Best match found for Apple Music:', bestMatch);
+
+          const newSongRef = ref(database, `playlists/${playlistId}/songs/${songKey}`);
+          await update(newSongRef, {
+            apple_music_id: bestMatch,
+          }); // Update the song with the Apple Music ID
+        } else {
+          missingSongs.push(`${(song as any).name} - ${(song as any).artist}`);
+          console.log('No match found for song:', (song as any).name);
+        }
+      }
+
+      if (songIds.length > 99) {
+        console.log('Adding tracks to Apple Music playlist:', songIds);
+        await addTracksToAppleMusicPlaylist(developerToken, musicUserToken, newPlaylistId, songIds);
+        songIds = []; // Reset after adding
+      }
+    }
+
+    if (songIds.length > 0) {
+      console.log('Adding remaining tracks to Apple Music playlist:', songIds);
+      await addTracksToAppleMusicPlaylist(developerToken, musicUserToken, newPlaylistId, songIds);
+    }
+
+    console.log('The following songs were not found on Apple Music:', missingSongs.join(', '));
+    return newPlaylistId;
+
+  } catch (error) {
+    console.error('Error exporting to Apple Music:', error);
+  }
+}
+
+async function createAppleMusicPlaylist(developerToken: string, musicUserToken: string, name: string, description: string = ''): Promise<string> {
+  const url = `https://api.music.apple.com/v1/me/library/playlists`;
+
+  const body = {
+    attributes: {
+      name: name,
+      description: description,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${developerToken}`,
+      'Music-User-Token': musicUserToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Failed to create Apple Music playlist: ${errorData.error?.message || errorData}`);
+  }
+
+  const data = await response.json();
+  return data.data[0].id;
+}
+
+async function addTracksToAppleMusicPlaylist(developerToken: string, musicUserToken: string, playlistId: string, trackIds: string[]): Promise<void> {
+  const url = `https://api.music.apple.com/v1/me/library/playlists/${playlistId}/tracks`;
+
+  const body = {
+    data: trackIds.map(id => ({
+      id: id,
+      type: "songs",
+    })),
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${developerToken}`,
+      'Music-User-Token': musicUserToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Failed to add tracks to Apple Music playlist: ${errorData.error?.message || errorData}`);
+  }
+}
+
 // Export given playlist to Spotify
 async function exportToSpotify(playlist: string, token: string) {
   try {
@@ -38,7 +169,7 @@ async function exportToSpotify(playlist: string, token: string) {
 
     let playlistId = await createSpotifyPlaylist(
       token,
-      await getCurrentUserId(token),
+      await getCurrentSpotifyUserId(token),
       snapshot.val().name,
       snapshot.val().description,
     )
@@ -54,12 +185,13 @@ async function exportToSpotify(playlist: string, token: string) {
       if (song && (song as any).spotify_uri) {
         songUris.push((song as any).spotify_uri);
       } else {
-        const bestMatch = await getBestSpotifyMatch({
-          name: (song as any).name,
-          artists: (song as any).artist.split(', '),
-          durationMs: (song as any).duration_ms,
-          token,
-        });
+        const bestMatch = await getBestSpotifyMatch(
+          (song as any).name,
+          (song as any).artist.split(', '),
+          (song as any).duration_ms,
+          (song as any).album,
+          token
+        );
 
         if (bestMatch) {
           songUris.push(bestMatch);
@@ -152,7 +284,7 @@ async function addTracksToSpotifyPlaylist(
   }
 }
 
-async function getCurrentUserId(accessToken: string): Promise<string> {
+async function getCurrentSpotifyUserId(accessToken: string): Promise<string> {
   const response = await fetch('https://api.spotify.com/v1/me', {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -171,9 +303,15 @@ async function getCurrentUserId(accessToken: string): Promise<string> {
 function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
-    .replace(/[\(\)]/g, "-") // replace ( and ) with -
-    .replace(/\s*-\s*/g, "-") // unify spacing around hyphens
-    .replace(/\s+/g, " ") // normalize spaces
+    .replace(/\(feat[^\)]*\)/gi, "") // remove (feat. XYZ)
+    .replace(/\[feat[^\]]*\]/gi, "") // remove [feat. XYZ]
+    .replace(/\(.*remix.*\)/gi, " remix") // turn (Lucian Remix) -> remix
+    .replace(/-.*remix/gi, " remix")      // turn - Lucian Remix -> remix
+    .replace(/[’']/g, "'")
+    .replace(/[\(\)\[\]\{\}]/g, "-")
+    .replace(/[^a-z0-9\s\-']/g, "")
+    .replace(/\s*-\s*/g, "-")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -212,130 +350,160 @@ export async function getBestAppleMusicMatch({
   console.log("Tracks returned:", songs?.length);
   if (!songs || songs.length === 0) return null;
 
-  const inputArtistsLower = artists.map((a) => a.toLowerCase().trim());
   const normalizedInputName = normalizeTitle(name);
+  const normalizedInputArtists = artists.map((artist) => normalizeTitle(artist));
 
   let bestMatch: { id: string; score: number } | null = null;
 
   for (const song of songs) {
     const songName = song.attributes.name;
-    const songArtist = song.attributes.artistName.toLowerCase();
+    const songArtist = song.attributes.artistName;
+    const songAlbum = song.attributes.albumName ?? "";
     const songDurationMs = song.attributes.durationInMillis;
 
     const normalizedSongName = normalizeTitle(songName);
-    const songArtists = songArtist
+    const normalizedSongAlbum = normalizeTitle(songAlbum);
+    const songArtists = normalizeTitle(songArtist)
       .split(/,|&|feat\.|featuring|\+|with/i)
       .map((a: string) => a.trim())
       .filter((a: string | any[]) => a.length > 0);
 
-    const nameMatch =
-      normalizedSongName.includes(normalizedInputName) ||
-      normalizedInputName.includes(normalizedSongName);
+    const nameMatch = normalizedSongName === normalizedInputName;
+    const artistOverlap = songArtists.filter((artist) => normalizedInputArtists.includes(artist)).length;
+    const artistMatchRatio = artistOverlap / normalizedInputArtists.length;
+    const durationDiffSec = Math.abs(songDurationMs - durationMs) / 1000;
+    const albumMatch = normalizedSongAlbum.includes(normalizedInputName) || normalizedSongAlbum.includes(normalizedInputArtists[0]);
+    const isCompilation = normalizedSongAlbum.includes("greatest hits") || normalizedSongAlbum.includes("compilation") || normalizedSongAlbum.includes("ultra");
 
-    const matchingArtistCount = inputArtistsLower.filter((inputArtist) =>
-      songArtists.includes(inputArtist)
-    ).length;
-
-    const artistCountMatch =
-      Math.abs(songArtists.length - inputArtistsLower.length) <= 1;
-
-    const durationDiff = Math.abs(songDurationMs - durationMs) / 1000;
+    // Scoring
+    let score = 0;
+    if (nameMatch) score += 5;
+    score += artistMatchRatio * 3;
+    if (albumMatch) {
+      score += 3;
+    } else {
+      score -= 1;
+    }
+    if (durationDiffSec <= 3) score += 1;
+    if (durationDiffSec <= 1) score += 1;
+    if (isCompilation) score -= 2;
 
     console.log("Checking track:", {
       songName,
       songArtists,
+      songAlbum,
       songDurationMs,
       nameMatch,
-      matchingArtistCount,
-      durationDiff,
-      artistCountMatch,
+      artistMatchRatio,
+      albumMatch,
+      durationDiffSec,
+      isCompilation,
+      score,
     });
 
-    if (nameMatch && matchingArtistCount > 0 && artistCountMatch) {
-      const score = matchingArtistCount * 10 + (15 - durationDiff);
-      console.log("Track is a viable match. Score:", score);
-
-      if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { id: song.id, score };
-      }
+    if (!bestMatch || score > bestMatch.score) {
+      bestMatch = { id: song.id, score };
     }
   }
 
-  console.log("Best Match:", bestMatch);
-  return bestMatch?.id ?? null;
+  if (bestMatch && bestMatch.score >= 6) {
+    console.log("Selected best match with ID:", bestMatch.id);
+    return bestMatch.id;
+  } else {
+    console.log("No reasonable Apple Music match found.");
+    return null;
+  }
 }
 
 // takes name artists, and duration as input and returns the best Spotify match or null if no matches
-export async function getBestSpotifyMatch({
-  name,
-  artists,
-  durationMs,
-  token,
-}: SongMatchInput): Promise<string | null> {
-  const searchTerm = encodeURIComponent(`${name} ${artists.join(" ")}`);
-  const url = `https://api.spotify.com/v1/search?q=${searchTerm}&type=track&limit=10`;
+export async function getBestSpotifyMatch(
+  name: string,
+  artists: string[],
+  durationMs: number,
+  albumName: string,
+  spotifyToken: string
+): Promise<string | null> {
 
-  console.log("Spotify Search URL:", url);
+  const query = encodeURIComponent(`${name} ${artists.join(" ")}`);
+  const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=10`;
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    console.error("Spotify API error:", response.statusText);
-    return null;
-  }
-
-  const data = await response.json();
-  const tracks = data.tracks?.items;
-  console.log("Tracks returned:", tracks?.length);
-  if (!tracks || tracks.length === 0) return null;
-
-  const inputArtistsLower = artists.map((a) => a.toLowerCase().trim());
-
-  let bestMatch: { id: string; score: number } | null = null;
-
-  for (const track of tracks) {
-    const trackName = track.name.toLowerCase();
-    const trackArtists = track.artists.map((a: any) => a.name.toLowerCase());
-    const normalizedInputName = normalizeTitle(name);
-    const normalizedTrackName = normalizeTitle(trackName);
-    const trackDurationMs = track.duration_ms;
-
-    const nameMatch =
-      normalizedTrackName.includes(normalizedInputName) ||
-      normalizedInputName.includes(normalizedTrackName);
-    const matchingArtistCount = inputArtistsLower.filter((inputArtist) =>
-      trackArtists.includes(inputArtist)
-    ).length;
-    const artistCountMatch =
-      Math.abs(trackArtists.length - inputArtistsLower.length) <= 1;
-    const durationDiff = Math.abs(trackDurationMs - durationMs) / 1000;
-
-    console.log("Checking track:", {
-      name: track.name,
-      trackArtists,
-      trackDurationMs,
-      nameMatch,
-      matchingArtistCount,
-      durationDiff,
-      artistCountMatch,
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${spotifyToken}`
+      }
     });
 
-    if (nameMatch && matchingArtistCount > 0 && artistCountMatch) {
-      const score = matchingArtistCount * 10 + (5 - durationDiff);
-      console.log("Track is a viable match. Score:", score);
+    if (!response.ok) {
+      console.error("Spotify search failed:", await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    const tracks = data.tracks?.items as any[];
+
+    if (!tracks || tracks.length === 0) {
+      console.log("No tracks found for query:", query);
+      return null;
+    }
+
+    const normalizedName = normalizeTitle(name);
+    const normalizedAlbum = normalizeTitle(albumName);
+    const normalizedArtists = artists.map((artist) => normalizeTitle(artist));
+
+    let bestMatch: { uri: string; score: number } | null = null;
+
+    for (const track of tracks) {
+      const trackName = normalizeTitle(track.name);
+      const trackArtists = track.artists.map((artist: any) => normalizeTitle(artist.name));
+      const trackAlbum = normalizeTitle(track.album?.name || "");
+      const trackDurationMs = track.duration_ms;
+
+      const nameMatch = trackName === normalizedName;
+      const artistOverlap = trackArtists.filter((artist: string) => normalizedArtists.includes(artist)).length;
+      const artistMatchRatio = artistOverlap / normalizedArtists.length;
+      const durationDiffSec = Math.abs(trackDurationMs - durationMs) / 1000;
+      const albumMatch = trackAlbum === normalizedAlbum;
+      const isCompilation = track.album?.album_type === "compilation";
+
+      // Scoring
+      let score = 0;
+      if (nameMatch) score += 5;
+      score += artistMatchRatio * 3;
+      if (albumMatch) {
+        score += 3;
+      } else {
+        score -= 1;
+      }
+      if (durationDiffSec <= 3) score += 1;
+      if (durationDiffSec <= 1) score += 1;
+      if (isCompilation) score -= 2;
+
+      console.log(`Track: ${track.name}`);
+      console.log(`  URI: ${track.uri}`);
+      console.log(`  nameMatch: ${nameMatch}`);
+      console.log(`  artistMatchRatio: ${artistMatchRatio}`);
+      console.log(`  albumMatch: ${albumMatch}`);
+      console.log(`  durationDiffSec: ${durationDiffSec}`);
+      console.log(`  score: ${score}`);
 
       if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { id: track.id, score };
+        bestMatch = { uri: track.uri, score };
       }
     }
-  }
 
-  console.log("Best Match:", bestMatch);
-  return bestMatch?.id ?? null;
+    // Require a **minimum score** to accept
+    if (bestMatch && bestMatch.score >= 6) {
+      console.log("Selected best match with URI:", bestMatch.uri);
+      return bestMatch.uri;
+    } else {
+      console.log("No reasonable match found.");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error during Spotify search:", error);
+    return null;
+  }
 }
 
 export default function PlaylistScreen() {
@@ -351,7 +519,7 @@ export default function PlaylistScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  
+
   // Load Playlist from Firebase
   useEffect(() => {
     if (!playlistId) return;
@@ -411,12 +579,13 @@ export default function PlaylistScreen() {
 
   const testMatch = async () => {
     try {
-      const result = await getBestSpotifyMatch({
-        name: "Pink Pony Club",
-        artists: ["Chappell Roan"],
-        durationMs: 258000,
-        token: token || '',
-      });
+      const result = await getBestSpotifyMatch(
+        "Pink Pony Club",
+        ["Chappell Roan"],
+        258000,
+        "Pink Pony Club",
+        token || '',
+      );
       console.log("token:", token)
 
       console.log("Spotify Match Result:", result);
