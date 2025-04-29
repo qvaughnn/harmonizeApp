@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 //import { WebView } from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-
+import { decode as atob } from 'base-64';
 
 
 
@@ -53,7 +53,7 @@ async function checkUsernameUniqueness(username: string): Promise<boolean> {
 }
 
 // Gets the user code of a given spotify id and null of the user code doesn't exist
-async function getSpotifyUserCode(id: string): Promise<string | null> {
+async function getSpotifyUserCode(id: string, musicService: 'AppleMusic' | 'Spotify'): Promise<string | null> {
   const usersRef = ref(database, 'users');
   let snapshot = null;
 
@@ -63,9 +63,19 @@ async function getSpotifyUserCode(id: string): Promise<string | null> {
     console.error("Error getting users", error.message)
   }
 
+  let userProfileRef;
+
   if (snapshot != null && snapshot.exists()) {
     for (const username in snapshot.val()) {
-      const userProfileRef = child(usersRef, `${username}/Spotify/userProfile/id`);
+      if (musicService === 'Spotify'){
+      userProfileRef = child(usersRef, `${username}/Spotify/userProfile/id`);
+      }
+      else{
+      console.log("Inside getSpotifyUserCode: ", musicService)
+      userProfileRef = child(usersRef, `${username}/AppleMusic/token`);
+      console.log("Still inside getSpotifyUserCode: ", userProfileRef)
+      }
+
       const userProfileSnapshot = await get(userProfileRef);
 
       if (userProfileSnapshot.exists() && userProfileSnapshot.val() === id) {
@@ -102,16 +112,18 @@ export default function HomeScreen() {
     if (response?.type === 'success') {
       exchangeCodeForToken(response.params.code);
     }
-    if (musicService === 'AppleMusic') {
-      exchangeCodeForToken();
-    }
-  }, [response, musicService]);
+//    if (musicService === 'AppleMusic') {
+//      exchangeCodeForToken();
+//    }
+  }, [response]);
 
   // Exchange code for token and store user data in Firebase
   const exchangeCodeForToken = async (code: string) => {
     console.log("exchangeCodeForToken CALLED — musicService:", musicService);
     try {
-      if (musicService === 'AppleMusic') {
+  
+/*
+    if (musicService === 'AppleMusic') {
         const appleUserId = "APPLES";
         console.log("appleUserID: ", appleUserId);
 
@@ -134,7 +146,11 @@ export default function HomeScreen() {
         });
 
         return;
-      } else {
+    } else {
+
+
+*/
+
 
      
 
@@ -198,7 +214,12 @@ export default function HomeScreen() {
       // check if Spotify user exists
       let userCode = null
       try {
-        userCode = await getSpotifyUserCode(userProfile.id)
+        if (musicService === 'Spotify') {
+        userCode = await getSpotifyUserCode(userProfile.id, 'Spotify')
+        }
+//        else {
+//        userCode = await getSpotifyUserCode(userProfile.id, 'AppleMusic')
+//        }
       } catch (error: unknown) {
         // ERROR HERE
         console.log("id:", userProfile.id);
@@ -237,7 +258,7 @@ export default function HomeScreen() {
       });
       console.log("User logged in:", userCode)
       console.log("User data stored in Firebase:", userProfile);
-    }} catch (error) {
+    } catch (error) {
       console.error("Token exchange error:", error);
     }
 
@@ -245,7 +266,7 @@ export default function HomeScreen() {
 
   };
 
-
+/*
   const fetchUserProfile = async () => {
     try {
       if (!token) {
@@ -272,20 +293,30 @@ export default function HomeScreen() {
       console.error("User profile fetch error:", error);
     }
   };
-
-
+*/
+/*
   useEffect(() => {
   const sub = Linking.addEventListener('url', ({ url }) => {
     const { queryParams } = Linking.parse(url);
-    const token = queryParams.token;
-    console.log("Received Apple Music token:", token);
+    const encToken = queryParams.token;
+    if (encToken){
+      try{
+        const userToken = atob(encToken);
+
+        console.log("Received Apple Music token:", userToken);
+      } catch (error){
+        console.error("Error decoding token", error);
+        }
+    } else{
+        console.log("No token found in url");
+    }
     // Save to context or Firebase, navigate to next screen, etc.
   });
 
   return () => sub.remove();
 }, []);
 
-
+*/
   const handleAppleMusicLogin = async () => {
   const result = await WebBrowser.openAuthSessionAsync(
     'https://tangerine-scone-fefb23.netlify.app',
@@ -296,11 +327,61 @@ export default function HomeScreen() {
  // console.log("Redirect Test Result:", result);
 
   if (result.type === 'success' && result.url.includes('token=')) {
-    const userToken = decodeURIComponent(result.url.split('token=')[1]);
+    console.log("result success!!!!!!!!!!");
+    const { queryParams } = Linking.parse(result.url);
+    const encodedToken = queryParams?.token;
+
+    console.log("Enc tok: ", encodedToken);
+    console.log("Typeof atob:", typeof atob);
+    const decodedBase64 = decodeURIComponent(encodedToken);
+    const userToken = atob(decodedBase64);
+    console.log("Dec tok: ", userToken);
+
     console.log(' Apple Music User Token:', userToken); 
+    //exchangeCodeForToken(response.params.code);
     setMusicService('AppleMusic'); //Delete later
-    router.replace('/playlistImport');
+    //router.replace('/playlistImport');
     // Proceed with Firebase, etc.
+
+    let firebaseUser = auth.currentUser;
+    console.log("Firebase user: ", firebaseUser)
+    if (!firebaseUser) {
+      const userCredential = await signInAnonymously(auth);
+      firebaseUser = userCredential.user;
+      console.log("Signed in Firebase user:", firebaseUser.uid);
+    }
+
+    let userCode = await getSpotifyUserCode(userToken, 'AppleMusic');
+    console.log("This is a user code: ", userCode)
+    if (userCode == null) {
+        let unique = false;
+        while (!unique) {
+          userCode = generateUsername();
+          unique = !(await checkUsernameUniqueness(userCode))
+        }
+        console.log("User created:", userCode)
+    }
+
+    setSpotifyUserId(userToken);
+
+    setCurrentUser({
+      uToken: userToken ?? 'Unknown User ID',
+      id: userCode ?? 'Unknown User Code',
+    });
+
+
+
+    const userRef = ref(database, `users/${userCode}/AppleMusic`)
+    await set(userRef, {
+      token: userToken,
+      createdAt: Date.now(),
+      userType: 'AppleMusic',
+    });
+
+    console.log("User logged in:", userCode);
+    router.replace('/playlistImport');
+    
+
   } else {
     console.log(' Auth cancelled or failed:', result);
   }

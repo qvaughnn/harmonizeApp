@@ -8,6 +8,8 @@ import { useMusicService } from '../contexts/MusicServiceContext';
 import { database } from './config/firebase';
 import { ref, onValue, set, push } from 'firebase/database';
 import { Playlist, Song, UserRef } from '@/types';
+import { encode as btoa } from 'base-64';
+
 
 // Local type for Spotify track search results
 type SpotifyTrack = {
@@ -49,7 +51,9 @@ export default function PlaylistScreen() {
   const [editMode, setEditMode] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
 
-  
+ 
+
+ 
   // Load Playlist from Firebase
   useEffect(() => {
 /*
@@ -151,7 +155,15 @@ export default function PlaylistScreen() {
 */
 
     if (!playlistId) return;
-    const playlistRef = ref(database, `playlists/${playlistId}`);
+    let playlistRef;
+    if (musicService === 'Spotify'){
+    playlistRef = ref(database, `playlists/${playlistId}`);
+    }
+    else{
+    console.log(playlistId);
+//    const safePlaylistId = btoa(playlistId as string);
+    playlistRef = ref(database, `playlists/${playlistId}`);
+    }
     const unsubscribe = onValue(
       playlistRef,
       (snapshot) => {
@@ -176,6 +188,7 @@ export default function PlaylistScreen() {
       }
       setSearchLoading(true);
       try {
+        if(musicService === 'Spotify'){
         const res = await fetch(
           `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=10`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -195,6 +208,32 @@ export default function PlaylistScreen() {
         } else {
           console.error('Search error:', data);
         }
+        }
+        else{ // Apple Music Search
+        const res = await fetch(`https://api.music.apple.com/v1/catalog/us/search?types=songs&limit=10`, {
+          method: "GET",
+          headers: {
+             Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+             "Music-User-Token" : currentUser.uToken,
+             "Content-Type": "application/json",
+          },
+         });
+        const data = await res.json();
+        if (res.ok && data.tracks?.items) {
+          setSearchResults(
+            data.tracks.items.map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              artists: t.attributes.artistName,
+              album: t.attributes.albumName,
+              uri: t.url,
+              duration_ms: attributes.durationInMillis,
+            }))
+            );
+        }
+        else{
+          console.error('Search error: ', data);
+        }}
       } catch (e) {
         console.error('Search fetch error:', e);
       } finally {
@@ -215,16 +254,33 @@ export default function PlaylistScreen() {
       return;
     }
 
-    const newSong: Song = {
-      name: track.name,
-      artist: track.artists.map(a => a.name).join(', '),
-      album: track.album.name ?? '',
-      duration_ms: track.duration_ms,
-      cover_art: track.album.images[0]?.url ?? '',
-      spotify_id: track.id,
-      spotify_uri: track.uri,
-    };
 
+    let newSong: Song;
+
+    if(musicService === 'Spotify'){
+     newSong  = {
+     name: track.name,
+     artist: track.artists.map(a => a.name).join(', '),
+     album: track.album.name ?? '',
+     duration_ms: track.duration_ms,
+     cover_art: track.album.images[0]?.url ?? '',
+     spotify_id: track.id,
+     spotify_uri: track.uri ?? '',
+     apple_uri: track.url ?? '',
+    };
+    }
+    else{
+    newSong  = {
+      name: track.name,
+      artist: track.artist,
+      album: track.attributes.albumName ?? '',
+      duration_ms: track.attributes.durationInMillis,
+      cover_art: track.image ?? '', //TODO: UPDATE THIS
+      spotify_id: track.id, //Used for both Apple and Spotify
+      spotify_uri: track.uri ?? '',
+      apple_uri: track.url ?? '',
+    };
+    }
     const updatedSongs = [...(playlist.songs || []), newSong];
 
     await set(ref(database, `playlists/${playlistId}/songs`), updatedSongs);
@@ -424,7 +480,7 @@ export default function PlaylistScreen() {
       <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)}>
         <View style={styles.modalContent}>
           <Searchbar
-            placeholder="Search Spotify tracks"
+            placeholder={musicService === 'Spotify' ? "Search Spotify tracks" : "Search Apple Music tracks"}
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchbar}
