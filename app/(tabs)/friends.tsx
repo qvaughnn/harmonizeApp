@@ -4,7 +4,8 @@ import { Text, TextInput, Button, Searchbar, Avatar, Card } from 'react-native-p
 import React, { useEffect, useState } from 'react';
 import { app, database } from "../config/firebase";
 import { useAuth } from '../../contexts/AuthContext';
-import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
+// import {User} from '@/types';
+// import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
 
 // returns true if successful and false if not
@@ -144,7 +145,7 @@ export async function getSentFriendRequests(userId: string): Promise<string[]> {
 const Friends = () => {
 
   const { currentUser } = useAuth(); 
-  const id = currentUser.id;
+  const id = currentUser?.id;
   // console.log('🟢 current friends:', getFriends(id));
   const [searchQuery, setSearchQuery] = React.useState('');
   function handleSearchQueryChange(query: string): void {
@@ -187,21 +188,37 @@ const Friends = () => {
       <Text variant="displayMedium" style={styles.title}>
         FRIENDS
       </Text>
-      <View style={styles.searchContainer}>
+      {/* <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Search Friends"
           value={searchQuery}
           onChangeText={handleSearchQueryChange}
           style={styles.searchbar}
         />
-      </View>
+      </View> */}
+      <Text style={styles.code}>
+        Share your unique code with others to collaborate:
+      </Text>
+
+      <Card style={styles.codeCard}>
+          <Text style={styles.codeCardText}> {id} </Text>
+      </Card>
+      
       <Text variant="headlineMedium" style={styles.requests}>
           Friend Requests
-        </Text>
+      </Text>
 
       <Text variant="headlineMedium" style={styles.yourFriends}>
           Your Friends
-        </Text>
+      </Text>
+
+      <Button 
+        mode="contained" 
+        onPress={() => console.log("hi")} 
+        style={styles.addButton}
+        labelStyle={styles.addButtonText}>
+        Add
+      </Button>
 
       {/* <View style={styles.listContainer}>
         {friends.map((friend, index) => (
@@ -291,8 +308,7 @@ const styles = StyleSheet.create({
   },
   friendCard: {
     width: '70%',
-    height: 50, //adjusts the friend tile height
-    // backgroundcolor: 'transparant',
+    height: 50,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderWidth: 1,
     marginBottom: 15,
@@ -332,4 +348,38 @@ const styles = StyleSheet.create({
     left: 25,
     justifyContent: 'flex-start',
   },
+  codeCard: {
+    width: 100,
+    height: 50, 
+    top: 90,
+    backgroundColor: '#D2B4DE',
+    borderWidth: 1,
+    marginBottom: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  codeCardText: {
+    color: 'black',
+    fontWeight: 'bold',
+  },
+  code: {
+    top: 80,
+    color: 'white',
+    paddingLeft: 10,
+    paddingRight: 10,
+  },
+  addButton: {
+    width: 100,
+    height: 45, 
+    top: 335,
+    left: 120,
+    backgroundColor: '#C39BD3',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 20
+  }
 });
