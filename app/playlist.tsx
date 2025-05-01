@@ -45,6 +45,8 @@ export default function PlaylistScreen() {
   // Successful Adding Modal
   const [successModal, setSuccessModal] = useState(false);
 
+  const [addCollab, setAddCollab] = useState(false);
+
   // Pin playlist name when scrolling
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -266,7 +268,8 @@ export default function PlaylistScreen() {
             size={28}
             onPress={() => {
               // Open add collaborator modal or screen
-              console.log('Add collaborator pressed');
+              console.log('Add collaborator pressed')
+              setAddCollab(true)
             }}
             iconColor="white"
           />
@@ -406,6 +409,8 @@ export default function PlaylistScreen() {
           
         </View>
       </Modal>
+
+      {/* Remove song from playlist popup */}
       <Modal visible={confirmRemoveVisible} transparent onDismiss={() => setConfirmRemoveVisible(false)}>
         <ThemedView style={styles.confirmModal}>
           <Text style={styles.confirmText}>
@@ -436,6 +441,44 @@ export default function PlaylistScreen() {
         </View>
       </View>
     </Modal>
+
+    {/* Search and Add for friends Modal */}
+    <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
+        <View style={styles.modalContent}>
+          <Searchbar
+            placeholder="Search for Harmonizers"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchbar}
+          />
+          <IconButton
+            icon="close"
+            size={30}
+            onPress={() => setAddCollab(false)}
+            style={styles.closeinbar}
+          />
+          {searchLoading ? (
+            <ActivityIndicator animating size="small" />
+          ) : (
+            <FlatList
+              data={searchResults}
+              keyExtractor={t => t.id}
+              style={{ maxHeight: 300 }}
+              renderItem={({ item }) => (
+                <List.Item
+                  title={item.name}
+                  description={item.artists.map(a => a.name).join(', ')}
+                  left={() => (
+                    <Image source={{ uri: item.album.images[0]?.url }} style={styles.thumbnail} />
+                  )}
+                  onPress={() => selectTrack(item)}
+                />
+              )}
+            />
+          )}
+          
+        </View>
+      </Modal>
 
     </ThemedView>
   );
