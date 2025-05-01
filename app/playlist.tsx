@@ -21,6 +21,12 @@ type SpotifyTrack = {
   duration_ms: number;
 };
 
+// Local type for friends
+type User = {
+  id: string;
+  picture: string;
+}
+
 export default function PlaylistScreen() {
   const router = useRouter();
   const { currentUser, token } = useAuth();
@@ -45,7 +51,9 @@ export default function PlaylistScreen() {
   // Successful Adding Modal
   const [successModal, setSuccessModal] = useState(false);
 
+  // Adding Collaborators
   const [addCollab, setAddCollab] = useState(false);
+  const [friendsResults, setFriendsResults] = useState<User[]>([]);
 
   // Pin playlist name when scrolling
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -461,17 +469,16 @@ export default function PlaylistScreen() {
             <ActivityIndicator animating size="small" />
           ) : (
             <FlatList
-              data={searchResults}
+              data={friendsResults}
               keyExtractor={t => t.id}
               style={{ maxHeight: 300 }}
               renderItem={({ item }) => (
                 <List.Item
-                  title={item.name}
-                  description={item.artists.map(a => a.name).join(', ')}
+                  title={item.id}
                   left={() => (
-                    <Image source={{ uri: item.album.images[0]?.url }} style={styles.thumbnail} />
+                    <Image source={ require('../assets/images/avatar.png') } style={styles.thumbnail} />
                   )}
-                  onPress={() => selectTrack(item)}
+                  onPress={() => router.push(`/friendProfile?id=${item.id}`)}
                 />
               )}
             />
