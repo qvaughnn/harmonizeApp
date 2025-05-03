@@ -23,9 +23,6 @@ export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: str
       },
       body,
     };
-    console.log('Payload body:', params);
-    console.log('Payload body as string:', params.toString());
-    console.log('Refresh token value:', refreshToken);
     const response = await fetch(url, payload);
 
     const tokenData = await response.json();

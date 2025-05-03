@@ -59,18 +59,19 @@ export default function Authentication() {
                 console.error("Error refreshing token:", error);
               }
             }
+            setToken(spotifyData.accessToken);
             console.log("Now going to home")
             // Navigate to home page
             router.replace('/(tabs)/home');
           } else {
             // No music service connected yet
             console.log("No music service connected yet")
-            router.replace('/connect');
+            router.replace('./connect');
           }
         } else {
           // User exists but no profile
           console.log("User exists but no profile")
-          router.replace('/connect');
+          router.replace('./connect');
         }
       } else {
         // New user registration
@@ -80,7 +81,7 @@ export default function Authentication() {
 //      const friendCode = await generateUniqueFriendCode();          // new util (see §4)
 //      await set(userRef, { email, displayName: email, friendCode });
         // New users always go to index to connect music service
-        router.replace('/connect');
+        router.replace('./connect');
       }
     } catch (err: any) {
       setError(err.message);
