@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useMusicService } from '../contexts/MusicServiceContext';
 import { database, fireDB } from './config/firebase';
 import { Playlist, Song, UserRef } from '@/types';
-import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove, update } from "firebase/database";
 import { encode as btoa } from 'base-64';
 import { collection, getDocs } from "firebase/firestore"; 
 
