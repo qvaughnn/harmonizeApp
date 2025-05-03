@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "googleServicesFile": ".GoogleService-Info.plist",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ios.harmonizeApp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -38,6 +42,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7a0ba8f1-cecb-40a8-bf06-4cc372c68798"
+      }
+    },
+    "owner": "graceallas"
   }
 }
