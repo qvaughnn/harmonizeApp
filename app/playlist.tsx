@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image, FlatList, Pressable } from 'react-native';
-import { Text, ActivityIndicator, IconButton, Modal, Searchbar, List, Icon } from 'react-native-paper';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, View, Image, FlatList, Pressable, Modal, Animated } from 'react-native';
+import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 import { useMusicService } from '../contexts/MusicServiceContext';
-import { database } from './config/firebase';
+import { database, fireDB } from './config/firebase';
 import { ref, onValue, set, push } from 'firebase/database';
 import { Playlist, Song, UserRef } from '@/types';
 import { encode as btoa } from 'base-64';
+import { collection, getDocs } from "firebase/firestore"; 
 
 
 // Local type for Spotify track search results
@@ -51,109 +52,146 @@ export default function PlaylistScreen() {
   const [editMode, setEditMode] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
 
- 
+  // Successful Adding Modal
+  const [successModal, setSuccessModal] = useState(false);
 
- 
-  // Load Playlist from Firebase
-  useEffect(() => {
-/*
-    if (playlistId && token) {
-      fetchPlaylistData(playlistId as string);
+  // Pin playlist name when scrolling
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const titleFontSize = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [35, 20],
+    extrapolate: 'clamp',
+  });
+
+  const titleTopOffset = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [0, -20],
+    extrapolate: 'clamp',
+  });
+
+  const headerBackgroundOpacity = scrollY.interpolate({
+    inputRange: [40, 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+
+  const getFirestore = async () => {
+  const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+  for (const doc of querySnapshot.docs) {
+    const data = doc.data();
+    if (data.devToken) {
+      return data.devToken;
     }
-    if (playlistId && (musicService === 'AppleMusic')){
-      fetchPlaylistData(playlistId as string);
-    }
-  }, [playlistId, token]);
-
-  const fetchPlaylistData = async (id: string) => {
-    try {
-      setLoading(true);
-      if (musicService === 'AppleMusic') {
-        console.log('Fetching AppleMusic data');
-        const playlistRes = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${id}`, {
-          headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
-            "Music-User-Token": "AtQfI0H0emIFKjAFHiInF+dmB3DfER2qT+fz3CKCQbSYxsuSETT10Mjz2yh4UKTIIJPRXPced+W7dHC0I9FA9497Xly9fd6WcplgoABAE+fts+ZQMYw4NgnEXaMFNzOPMpGHfiVdKc2rDX6PLK3fyIwzq9WisJR3s67XPgI9LWJWMMMrYtFPh9iu4ONxLkNGK1tyihGM98+/Voa3obC4d7XueFgDw2QyZzk4NJ2E1ETF7q0z2A==",
-          },
-        });
-        const playlistMeta = await playlistRes.json();
-
-
-        const playlistName = playlistMeta?.data?.[0]?.attributes?.name ?? 'Unnamed Playlist';
-        const playlistArtwork = playlistMeta?.data?.[0]?.attributes?.artwork?.url?.replace('{w}x{h}', '400x400');
-
-  
-        const response = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${id}/tracks`, {
-          headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
-            "Music-User-Token": "AtQfI0H0emIFKjAFHiInF+dmB3DfER2qT+fz3CKCQbSYxsuSETT10Mjz2yh4UKTIIJPRXPced+W7dHC0I9FA9497Xly9fd6WcplgoABAE+fts+ZQMYw4NgnEXaMFNzOPMpGHfiVdKc2rDX6PLK3fyIwzq9WisJR3s67XPgI9LWJWMMMrYtFPh9iu4ONxLkNGK1tyihGM98+/Voa3obC4d7XueFgDw2QyZzk4NJ2E1ETF7q0z2A==",
-          },
-        });
-        const data = await response.json();
-
-        console.log('Received data: ', data);
-        console.log('Received meta: ', playlistMeta);
-
-
-        if (response.ok) {
-          const tracks = data.data.map((song: any) => {
-            const attr = song.attributes;
-            return {
-              id: song.id,
-              name: attr.name,
-              artist: attr.artistName,
-              image: attr.artwork?.url?.replace('{w}x{h}', '200x200'),
-            };
-          });
-
-          setPlaylist({
-            name: playlistName,
-            images: playlistArtwork ? [{ url: playlistArtwork }] : [],
-            tracks: { items: tracks },
-          });
-        }
-
-      } else{
-        const response = await fetch(`https://api.spotify.com/v1/playlists/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (response.ok) {
-          setPlaylist(data);
-        } else {
-          console.error('Error fetching playlist:', data);
-        }
-      }
-    } catch (error) {
-      console.error('Playlist fetch error:', error);
-    } finally {
-      setLoading(false);
-    }
+  }
   };
 
-  const renderTrackItem = ({ item }: { item: any }) => {
-    //const track = item.track;
-    //if (!track) return null;
-    const track = musicService === 'AppleMusic' ? item : item.track;
-    if (!track) return null;
 
-    return (
-      <View style={styles.trackItem}>
-        <Image
-          source={{ uri: musicService === 'AppleMusic' ? track.image : track.album.images?.[0]?.url }}
-          style={styles.trackImage}
-        />
-        <View style={styles.trackInfo}>
-          <Text style={styles.trackName}>{track.name}</Text>
-          <Text style={styles.trackArtist}>
-            {musicService === 'AppleMusic' ? track.artist : track.artists?.map((artist: any) => artist.name).join(', ')}
-          </Text>
-        </View>
-      </View>
-*/
+  useEffect(() => {
+  const fetchFirestoreData = async () => {
+    try {
+      await getFirestore(); // Call the function here
+    } catch (error) {
+      console.error('Error fetching data from Firestore:', error);
+    }
+  };
+ fetchFirestoreData();
+ }, []);
 
+  async function exportToAppleMusic(playlist: Playlist, userToken: string) {
+  const appleDev = await getFirestore(); 
+  const headers = {
+    Authorization: `Bearer ${appleDev}`,
+    'Music-User-Token': userToken,
+    'Content-Type': 'application/json',
+  };
+
+  // Step 1: Find existing playlist by name
+  const res = await fetch('https://api.music.apple.com/v1/me/library/playlists', { headers });
+  const data = await res.json();
+  const existing = data.data?.find(p =>
+    p.attributes.name === playlist.name &&
+    p.attributes.canEdit === true);
+
+  console.log("Existing: ", existing);
+
+  let playlistId;
+  if (existing) {
+    playlistId = existing.id;
+  } else {
+    const createRes = await fetch('https://api.music.apple.com/v1/me/library/playlists', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        attributes: { name: playlist.name, description: playlist.description },
+      }),
+    });
+    const createData = await createRes.json();
+    playlistId = createData.data?.[0]?.id;
+  }
+
+  console.log("playlist ID: ", playlistId);
+
+  // Step 2: Fetch existing tracks from the playlist
+  const existingTrackRes = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${playlistId}/tracks`, {
+    headers,
+  });
+  const existingTrackData = await existingTrackRes.json();
+
+
+  console.log("Existing track data: ", existingTrackData);
+
+  const existingIds = new Set(
+  (existingTrackData.data || [])
+    .map((item: any) => {
+      const id = item.id;
+      return id.startsWith('a.') ? id : `a.${id}`;
+    })
+  );
+
+  console.log("Existing track Ids: ", existingIds);
+
+  // Step 3: Prepare only new songs
+  const uniqueTrackData = playlist.songs
+    .map(song => {
+      const rawId = song.apple_music_id || song.spotify_id;
+      if (!rawId) return null;
+
+
+      const normalizedId = rawId.startsWith('a.') ? rawId : `a.${rawId}`;
+      //if (!rawId.startsWith('a.')) return null;        
+      if (existingIds.has(normalizedId)) return null;         
+      return { id: normalizedId, type: 'songs' }; 
+    })
+    .filter(Boolean); // removes null
+
+  console.log("Track data: ", uniqueTrackData);
+
+  const requestBody = {
+  data: uniqueTrackData,
+  };
+
+  // Step 4: Add new songs if any
+  if (uniqueTrackData.length > 0) {
+    const addRes = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${playlistId}/tracks`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+    const addData = await addRes.json();
+    console.log("Added tracks response:", addData);
+  } else {
+    console.log("No new songs to add to Apple Music playlist.");
+  }
+}
+
+
+
+
+
+  // Load Playlist from Firebase
+  useEffect(() => { 
     if (!playlistId) return;
     let playlistRef;
     if (musicService === 'Spotify'){
@@ -182,7 +220,7 @@ export default function PlaylistScreen() {
   // Fetch Spotify tracks for search
   useEffect(() => {
     const fetchTracks = async () => {
-      if (!token || searchQuery.length < 3) {
+      if ((!token && !currentUser.uToken) || searchQuery.length < 3) {
         setSearchResults([]);
         return;
       }
@@ -210,15 +248,37 @@ export default function PlaylistScreen() {
         }
         }
         else{ // Apple Music Search
-        const res = await fetch(`https://api.music.apple.com/v1/catalog/us/search?types=songs&limit=10`, {
+        const appleDev = await getFirestore();
+        const res = await fetch(`https://api.music.apple.com/v1/catalog/us/search?term=${encodeURIComponent(searchQuery)}&types=songs&limit=10`, {
           method: "GET",
           headers: {
-             Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+             Authorization: `Bearer ${appleDev}`,
              "Music-User-Token" : currentUser.uToken,
              "Content-Type": "application/json",
           },
          });
         const data = await res.json();
+        console.log("Search res: ", data);
+
+        const songs = data.results?.songs?.data || [];
+        console.log("Search res songs: ", songs);
+
+
+        if (res.ok && songs.length > 0) {
+          setSearchResults(
+            songs.map((t: any) => ({
+              id: t.id,
+              name: t.attributes.name,
+              artists: t.attributes.artistName,
+              album: t.attributes.albumName,
+              uri: t.attributes.url,
+              duration_ms: t.attributes.durationInMillis,
+              image: t.attributes.artwork?.url?.replace('{w}x{h}bb', '100x100bb'),
+            }))
+          );
+
+
+/*
         if (res.ok && data.tracks?.items) {
           setSearchResults(
             data.tracks.items.map((t: any) => ({
@@ -231,7 +291,8 @@ export default function PlaylistScreen() {
             }))
             );
         }
-        else{
+*/
+        } else{
           console.error('Search error: ', data);
         }}
       } catch (e) {
@@ -248,7 +309,7 @@ export default function PlaylistScreen() {
   const selectTrack = async (track: SpotifyTrack) => {
     if (!playlistId || !currentUser || !playlist) return;
 
-    const isDuplicate = playlist.songs?.some(s => s.spotify_id === track.id);
+    const isDuplicate = playlist.songs?.some((s: Song) => s.spotify_id === track.id);
     if (isDuplicate) {
       console.log('Song already exists in playlist');
       return;
@@ -272,13 +333,13 @@ export default function PlaylistScreen() {
     else{
     newSong  = {
       name: track.name,
-      artist: track.artist,
-      album: track.attributes.albumName ?? '',
-      duration_ms: track.attributes.durationInMillis,
-      cover_art: track.image ?? '', //TODO: UPDATE THIS
-      spotify_id: track.id, //Used for both Apple and Spotify
+      artist: typeof track.artists === 'string' ? track.artists : track.artists?.map(a => a.name).join(', '),
+      album: typeof track.album === 'string' ? track.album : track.album?.name ?? '',
+      duration_ms: track.duration_ms,
+      cover_art: track.image ?? '', 
+      spotify_id: track.id, // Used for both Apple and Spotify
       spotify_uri: track.uri ?? '',
-      apple_uri: track.url ?? '',
+      apple_uri: track.uri ?? '',
     };
     }
     const updatedSongs = [...(playlist.songs || []), newSong];
@@ -287,31 +348,25 @@ export default function PlaylistScreen() {
     setModalVisible(false);
     setSearchQuery('');
     setSearchResults([]);
+    setSuccessModal(true);
   };
 
   const removeSong = async (songToRemove: Song) => {
+    if (!playlistId || !currentUser || !playlist) return;
+
+    const updatedSongs = playlist.songs?.filter((s: Song) => s.spotify_id !== songToRemove.spotify_id);
+    await set(ref(database, `playlists/${playlistId}/songs`), updatedSongs);
+    setConfirmRemoveVisible(false);
   }
-  
 
-  // const renderTrackItem = ({ item }: { item: any }) => {
-  //   const track = item.track;
-  //   if (!track) return null;
-
-  //   return (
-  //     <View style={styles.trackItem}>
-  //       <Image
-  //         source={{ uri: track.album.images?.[0]?.url }}
-  //         style={styles.trackImage}
-  //       />
-  //       <View style={styles.trackInfo}>
-  //         <Text style={styles.trackName}>{track.name}</Text>
-  //         <Text style={styles.trackArtist}>
-  //           {track.artists?.map((artist: any) => artist.name).join(', ')}
-  //         </Text>
-  //       </View>
-  //     </View>
-  //   );
-  // };
+  // Successful Add Timed Popup
+  useEffect(() => {
+    if (successModal) {
+      const timer = setTimeout(() => {
+        setSuccessModal(false);
+      }, 500);
+    }
+  })
 
   if (loading) {
     return (
@@ -329,21 +384,38 @@ export default function PlaylistScreen() {
     );
   }
 
-  const toggleExport = () => {
-
-  }
-
   return (
     <ThemedView style={styles.overall}>
-      <FlatList
-        data={playlist.tracks?.items || []}
-        renderItem={renderTrackItem}
-        keyExtractor={(item, index) =>
-          musicService === 'AppleMusic'
-            ? `${item.id}_${index}`
-            : item.track?.id || String(index)
-        }
+
+    <Animated.View
+      style={[
+        styles.floatingTitleContainer,
+        {
+          transform: [{ translateY: titleTopOffset }],
+        },
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.floatingTitleBackground,
+          { opacity: headerBackgroundOpacity },
+        ]}
+      />
+      <Animated.Text style={[styles.floatingTitleText, { fontSize: titleFontSize }]}>
+        {playlist.name}
+      </Animated.Text>
+    </Animated.View>
+
+      <Animated.FlatList
+        data={playlist.songs}
+        keyExtractor={(item, index) => `${item.spotify_id}_${index}`}
+
         contentContainerStyle={styles.trackList}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
         ListHeaderComponent={(
         <View>
           
@@ -355,9 +427,6 @@ export default function PlaylistScreen() {
               style={styles.backButton}
               iconColor="grey"
             />
-            <Text style={styles.playlistTitle}>
-              {playlist.name}
-            </Text>
           </View>
 
           <View style={styles.coverContainer}>
@@ -406,7 +475,10 @@ export default function PlaylistScreen() {
               {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
               <IconButton
                 icon ="pencil"
-                onPress={()=>setEditMode(prev => !prev)}
+                onPress = { () => {
+                  setEditMode(prev => !prev);
+                  
+                } }
                 size={28}
                 iconColor="white"
               />
@@ -441,24 +513,40 @@ export default function PlaylistScreen() {
             )}
           />
      {/* Export Modal */}
-     <Modal visible={exportVisible} onDismiss={() => setExportVisible(false)}>
+     <Modal 
+      visible={exportVisible}
+      transparent = {true}
+      animationType='fade'
+      onDismiss={() => setExportVisible(false)}>
+      <View style={styles.exportWrap}>
        <View style={styles.exportContent}>
          <Pressable>
            <Text style={styles.exportText}>
              Export to Spotify
            </Text>
          </Pressable>
-         <Pressable>
+         <Pressable
+          onPress={() => {
+            if (playlist && currentUser?.uToken) {
+              exportToAppleMusic(playlist, currentUser.uToken);
+            } else {
+              console.warn('Playlist or user token missing');
+            }
+           }}
+           >
            <Text style={styles.exportText}>
              Export to Apple Music
            </Text>
          </Pressable>
+        <View style={ {marginTop: 10, alignItems: 'center'} }>
          <Pressable onPress={() => setExportVisible(false)}>
            <Text style={styles.exportClose}>
              Cancel
            </Text>
          </Pressable>
+        </View>
        </View>
+      </View>
      </Modal>
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
@@ -468,16 +556,29 @@ export default function PlaylistScreen() {
         style={styles.editIcon}
         iconColor="black"
       /> */}
-      {/* Add Song Button */}
-      <IconButton
+      {/* Add Song Button that is only visible when edit button is not active*/}
+      {!editMode && (<IconButton
         icon="plus-circle-outline"
         size={40}
         style={styles.addIcon}
         onPress={() => setModalVisible(true)}
-        iconColor='black'
-      />
+        iconColor='white'
+      />)
+      }
+
+      {/* Done Button that is only visible when edit button is active to end edit mode */}
+      {editMode && (<IconButton
+        icon="check-circle"
+        size={40}
+        style={styles.addIcon}
+        onPress={() => setEditMode(prev => !prev)}
+        iconColor='white'
+      />)
+      }
+
+
       {/* Search & Add Modal */}
-      <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)}>
+      <Modal visible={modalVisible} transparent onDismiss={() => setModalVisible(false)}>
         <View style={styles.modalContent}>
           <Searchbar
             placeholder={musicService === 'Spotify' ? "Search Spotify tracks" : "Search Apple Music tracks"}
@@ -501,9 +602,9 @@ export default function PlaylistScreen() {
               renderItem={({ item }) => (
                 <List.Item
                   title={item.name}
-                  description={item.artists.map(a => a.name).join(', ')}
+                  description={Array.isArray(item.artists) ? item.artists.map(a => a.name).join(', ') : item.artists}
                   left={() => (
-                    <Image source={{ uri: item.album.images[0]?.url }} style={styles.thumbnail} />
+                    <Image source={{ uri: item.image || item.album.images[0]?.url }} style={styles.thumbnail} />
                   )}
                   onPress={() => selectTrack(item)}
                 />
@@ -513,14 +614,14 @@ export default function PlaylistScreen() {
           
         </View>
       </Modal>
-      <Modal visible={confirmRemoveVisible} onDismiss={() => setConfirmRemoveVisible(false)}>
+      <Modal visible={confirmRemoveVisible} transparent onDismiss={() => setConfirmRemoveVisible(false)}>
         <ThemedView style={styles.confirmModal}>
           <Text style={styles.confirmText}>
             Are you sure you want to remove{' '}
             <Text style={{ fontWeight: 'bold', color:'white'}}>{selectedSongToRemove?.name}</Text>?
           </Text>
           <View style={styles.buttonContainer}>
-            <Pressable style={styles.confirmButton} >
+            <Pressable style={styles.confirmButton} onPress={() => selectedSongToRemove && removeSong(selectedSongToRemove)}>
                <Text style={styles.confirmButtonText}>Yes</Text> 
             </Pressable>
             <Pressable style={styles.cancelButton} onPress={() => setConfirmRemoveVisible(false)}>
@@ -529,6 +630,20 @@ export default function PlaylistScreen() {
           </View>
         </ThemedView>
       </Modal>
+
+      {/* Successful adding */}
+      <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
+      <View style={styles.modalWrap}>
+        <View style={styles.modalBoxSuccess}>
+          <IconButton
+            icon='check'
+            size={60}
+            iconColor='black'
+          />
+          <Text variant="titleLarge">Successfully Added!</Text>
+        </View>
+      </View>
+    </Modal>
 
     </ThemedView>
   );
@@ -569,7 +684,7 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 5,
     marginVertical: 12,
-    resizeMode: 'contain'
+    resizeMode: 'cover'
   },
   owner: {
     color: 'white',
@@ -639,11 +754,11 @@ const styles = StyleSheet.create({
     top: 70
   },
    searchbar: { 
-    marginBottom: 10,
+    marginBottom: -40,
     width: '90%'
   },
   closeinbar: {
-    top: -63,
+    top: -15,
     left: 285
   },
    thumbnail: { 
@@ -656,7 +771,9 @@ const styles = StyleSheet.create({
     padding: 30,
     margin: 40,
     borderRadius: 10,
+    top: 300,
     alignItems: 'center',
+    justifyContent: 'center'
   },
   confirmText: {
     fontSize: 16,
@@ -704,23 +821,30 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 10,
   },
-
-  
   edit: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'regular',
     marginLeft: 20,
   },
+  exportWrap: {
+    position: 'absolute',
+    top: 400, // or wherever you want it to appear
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
   exportContent: {
     backgroundColor: 'white',
     padding: 20,
-    margin: 10,
-    borderRadius: 8,
-    height: '55%',
-    width: '70%',
-    top: 70,
-    alignSelf: 'center',
+    borderRadius: 10,
+    width: '80%',
+    elevation: 5, // for shadow on Android
+    shadowColor: '#000', // for shadow on iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   exportText: {
     fontSize: 20,
@@ -728,6 +852,53 @@ const styles = StyleSheet.create({
   },
   exportClose: {
     fontSize: 15,
-    marginBottom: 20
+    marginBottom: 20,
   }, 
+  modalBoxSuccess: {
+    backgroundColor: 'white',
+    opacity: 0.7,
+    padding: 15,
+    borderRadius: 8,
+    width: '85%',
+    alignItems: 'center',
+    flexDirection: 'row'
+  },
+  modalWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalBox: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 8,
+    width: '85%',
+  },
+  floatingTitleContainer: {
+    position: 'absolute',
+    top: 0, // goes behind status bar
+    left: 0,
+    right: 0,
+    zIndex: 999,
+    alignItems: 'center',
+    justifyContent: 'flex-end', // push text downward
+    height: 110, // or whatever height gives you room to breathe
+    pointerEvents: 'none', // lets you interact with stuff behind it
+  },
+  floatingTitleText: {
+    color: 'white',
+    fontWeight: 'bold',
+    paddingTop: 40, // adds space below status bar
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+  },
+  floatingTitleBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(150, 144, 144, 0.8)', // semi-transparent black
+  },
 });

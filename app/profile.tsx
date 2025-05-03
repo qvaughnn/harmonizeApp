@@ -7,7 +7,7 @@ import { useMusicService } from '../contexts/MusicServiceContext';
 import { useRouter } from 'expo-router';
 
 const Profile = () => {
-  const { token, setToken } = useAuth(); 
+  const { token, setToken, currentUser } = useAuth(); 
   const [userData, setUserData] = useState<any>(null);
   const { musicService } = useMusicService();
   const { setMusicService } = useMusicService();
@@ -16,7 +16,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (token) {
-      fetchSpotifyProfile();
+      fetchUserProfile();
     } else if (musicService === 'AppleMusic') {
       fetchAppleMusicProfile();
     }
@@ -47,9 +47,9 @@ const Profile = () => {
 
   const fetchAppleMusicProfile = async () => {
     try {
-      // Cannot access userData without MusicKit integration, placeholder for now
+      console.log("Username : ", currentUser.name);
       setUserData({
-        display_name: "AppleUser",
+        display_name: currentUser.name,
         images: ['../assets/images/appleLogo.png'],
       });
     } catch (error) {
@@ -68,7 +68,18 @@ const Profile = () => {
         size={180}
         source={userData?.images?.[0]?.url ? { uri: userData.images[0].url } : require('../assets/images/avatar.png')}
       />
-      <Text style={styles.username} variant="headlineMedium">@{userData?.display_name || "username"}</Text>
+      <Text style={styles.username} variant="headlineMedium">@{userData?.display_name || currentUser.name}</Text>
+      <Button
+        icon="plus"
+        style={styles.importButton}
+        mode="elevated"
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}
+        onPress={() => {
+          router.replace('/playlistImport');
+        }}
+      >
+          Import Playlist
+      </Button>
       <Button
         icon="close"
         style={styles.logOutButton}
@@ -111,6 +122,11 @@ const styles = StyleSheet.create({
     top: 350,
     color: 'white',
   },
+  importButton:{
+    backgroundColor: 'grey',
+    position: 'absolute',
+
+  },
   logOutButton:{
     backgroundColor: 'grey',
     paddingVertical: 4,
@@ -122,5 +138,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     marginVertical: 6,
+    top: 70,
   },
 });

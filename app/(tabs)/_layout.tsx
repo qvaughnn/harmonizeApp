@@ -77,7 +77,7 @@ export default function TabLayout() {
             color={color} />,
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="index"
         options={{
           title: 'Log In',
@@ -87,7 +87,7 @@ export default function TabLayout() {
             name="star.fill" 
             color={color} />,
         }}
-      />
+      /> */}
     </Tabs>
     // {/* </AuthProvider> */}
   );

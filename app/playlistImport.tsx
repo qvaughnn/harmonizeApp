@@ -7,11 +7,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlatList } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { useMusicService } from '../contexts/MusicServiceContext';
-import { ref, set } from 'firebase/database';
-import { database } from "./config/firebase";
+import { ref, set, get, child } from 'firebase/database';
+import { database, fireDB } from "./config/firebase";
 import { Playlist, PlaylistPreview, UserRef, Song } from '@/types';
 import { update, push } from 'firebase/database';
 import { encode as btoa } from 'base-64';
+import { collection, getDocs } from "firebase/firestore"; 
 
 const AllPlaylists = () => {
   const { token, currentUser } = useAuth(); 
@@ -21,6 +22,34 @@ const AllPlaylists = () => {
   const { musicService } = useMusicService();
   const [results, setResults] = useState<PlaylistPreview[]>([]);
   const [filteredResults, setFilteredResults] = useState<PlaylistPreview[]>([]);
+
+  
+
+
+  const getFirestore = async () => {
+  const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+  for (const doc of querySnapshot.docs) {
+    const data = doc.data();
+    if (data.devToken) {
+      return data.devToken;
+    }
+  }
+  };
+
+
+  useEffect(() => {
+  const fetchFirestoreData = async () => {
+    try {
+      await getFirestore();
+    } catch (error) {
+      console.error('Error fetching data from Firestore:', error);
+    }
+  };
+
+  fetchFirestoreData();
+}, []);
+
+
   
   function handleSearchQueryChange(query: string): void {
     setSearchQuery(query);
@@ -45,23 +74,57 @@ const AllPlaylists = () => {
     }
   }, [token]);
 
+
+  const getAlreadyImportedOriginalIds = async (): Promise<string[]> => {
+  const importedOriginalIds: string[] = [];
+  console.log("Current user ID: ", currentUser.id);
+  const userPlaylistRef = ref(database, `users/${currentUser.id}/userPlaylists`);
+  const userPlaylistsSnap = await get(userPlaylistRef);
+
+  if (!userPlaylistsSnap.exists()) return [];
+
+  const userPlaylists = userPlaylistsSnap.val();
+  const playlistIds = Object.keys(userPlaylists);
+
+  for (const pid of playlistIds) {
+    const playlistSnap = await get(ref(database, `playlists/${pid}/original_id`));
+    if (playlistSnap.exists()) {
+      importedOriginalIds.push(playlistSnap.val());
+    }
+  }
+
+  return importedOriginalIds;
+};
+
+
   const fetchPlaylists = async () => {
     try {
+      console.log("Inside fetchPlaylists");
+      const alreadyImported = await getAlreadyImportedOriginalIds();
+      console.log("Already imported: ", alreadyImported);
+
+
       if (musicService === 'AppleMusic') {
-        console.log("Inside fetchPlaylists:", currentUser.uToken);
+        const appleDev = await getFirestore();
         const response = await fetch("https://api.music.apple.com/v1/me/library/playlists", {
           method: "GET",
           headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            Authorization: `Bearer ${appleDev}`,
             "Music-User-Token": currentUser.uToken,
             "Content-Type": "application/json",
           },
         });
 
+       if (response.status === 401 || response.status === 403) {
+         router.replace('/connect');
+         throw new Error("Apple token expired, redirected to login.");
+       }
+
         const data = await response.json();
         if (response.ok) {
           const playlistsData = data.data || [];
-          const fetchedPlaylists = playlistsData.map((playlist: any) => {
+          const fetchedPlaylists = playlistsData.filter((playlist: any) => !alreadyImported.includes(playlist.id))
+            .map((playlist: any) => {
             const attributes = playlist.attributes || {};
             return {
               id: playlist.id,
@@ -77,7 +140,8 @@ const AllPlaylists = () => {
           console.error("Apple Music playlist fetch error:", data);
         }
       } else {
-
+      console.log("Testing Spotify fetchPlaylist");
+      console.log("Token: ", token);
       const response = await fetch("https://api.spotify.com/v1/me/playlists", {
         method: "GET",
         headers: {
@@ -85,7 +149,8 @@ const AllPlaylists = () => {
           "Content-Type": "application/json",
         },
       });
-  
+      console.log("Fetch response: ", response);
+
       const data = await response.json();
   
       if (response.ok) {
@@ -111,143 +176,6 @@ const AllPlaylists = () => {
   };
 
 
-/*
-  const importCheckedPlaylists = async () => {
-    try {
-      for (const playlistId of checkedPlaylists) {
-        let playlistData, tracksData;
-        let data;
-
-        if (musicService === 'Spotify') {
-
-        const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-  
-        data = await response.json();
-  
-        if (!response.ok) {
-          console.error(`Error fetching playlist ${playlistId}:`, data);
-          continue;
-        }
-  
-        playlistData = data;
-        tracksData = playlistData.tracks.items || [];
-
-        } else {
-
-        console.log("Inside importCheckedPlaylists: ", currentUser.uToken);
-        const response = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${playlistId}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
-            'Music-User-Token': currentUser.uToken,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        playlistData = await response.json();
-
-        const songsResponse = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${playlistId}/tracks`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
-            'Music-User-Token': currentUser.uToken,
-            'Content-Type': 'application/json',
-          },
-        });
-        const songs = await songsResponse.json();
-        tracksData = songs.data || [];
-      }
-
-
-        console.log('Data test value: ', data);
-
-        const owner: UserRef = {
-          id: currentUser?.id ?? 'unknown-user-id',
-          name: currentUser?.name ?? 'Unknown User',
-        };
-
-        const cleanPlaylistId = musicService === 'AppleMusic'
-          ? btoa(playlistId)
-          : playlistId;
-
-        const playlistRef = push(ref(database, 'playlists'));
-        const generatedId = playlistRef.key;
-
-        const playlist: Playlist = {
-          id: generatedId || playlistData.id, // Use hashed firebase id, but fallback on original from spotify if issues
-          original_id: playlistId,
-          name: playlistData.attributes.name ?? playlistData.name,
-          description: playlistData.description ?? 'Description placeholder',
-          cover_art: playlistData.images?.[0]?.url ?? playlistData.attributes.artwork?.url
-                                             ? attributes.artwork.url.replace('{w}x{h}', '100x100')
-                                             : require('../assets/images/coverSample.png'),
-          owner,
-          harmonizers: [owner],
-          og_platform: musicService.toLowerCase(),
-//          songs: (playlistData.tracks.items ?? []).map((item: any): Song => ({
-            songs: tracksData.map((item: any): Song => {
-          if (musicService === 'Spotify') {
-            return {
-              spotify_id: item.track.id,
-              name: item.track.name,
-              artist: item.track.artists.map((a: any) => a.name).join(', '),
-              spotify_uri: item.track.uri,
-              duration_ms: item.track.duration_ms ?? 0,
-              cover_art: item.track.album?.images?.[0]?.url ?? '',
-              album: item.track.album?.name ?? 'Unknown Album',
-            };
-          } else {
-            return {
-              spotify_id: item.id,
-              name: item.attributes.name,
-              artist: item.attributes.artistName,
-              spotify_uri: '',
-              duration_ms: 0,
-              cover_art: item.attributes.artwork?.url?.replace('{w}x{h}', '400x400') ?? '',
-              album: item.attributes.albumName ?? 'Unknown Album',
-            };
-          }
-        }),
-      };
-       
-////////////
-            spotify_id: item.track.id,
-            name: item.track.name,
-            artist: item.track.artists.map((a: any) => a.name).join(', '),
-            spotify_uri: item.track.uri,
-            duration_ms: item.track.duration_ms ?? 0,
-            cover_art: item.track.album?.images?.[0]?.url ?? '',
-            album: item.track.album?.name ?? 'Unknown Album',
-          })),
-        };
-////////////
-
-        console.log("About to write playlist:", JSON.stringify(playlist, null, 2));
-        //Save playlist to global playlist tree
-        await set(playlistRef, playlist);
-
-        // Save playlist reference under the user
-        if (currentUser?.id) {
-          const updates: Record<string, any> = {};
-          updates[`users/${currentUser.uToken}/userPlaylists/${generatedId}`] = true;
-          await update(ref(database), updates);
-        }
-        console.log(`Imported playlist: ${playlist.name}`);
-      }
-  
-      // Optional: navigate or notify after import
-      router.replace('/(tabs)/home');
-    } catch (error) {
-      console.error('Error importing playlists:', error);
-    }
-  };
-*/
 
 
   const importCheckedPlaylists = async () => {
@@ -282,15 +210,21 @@ const AllPlaylists = () => {
       } else {
         // Fetch Apple Music Playlist Info
 
-        console.log("Testing on apple path");
+        const appleDev = await getFirestore();
         const playlistResponse = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${playlistId}`, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            Authorization: `Bearer ${appleDev}`,
             'Music-User-Token': currentUser.uToken,
             'Content-Type': 'application/json',
           },
         });
+
+        if (playlistResponse.status === 401 || playlistResponse.status === 403) {
+          router.replace('/connect');
+          throw new Error("Apple token expired, redirected to login.");
+        }
+
         const playlistJson = await playlistResponse.json();
 
         if (!playlistResponse.ok) {
@@ -304,14 +238,14 @@ const AllPlaylists = () => {
         const songsResponse = await fetch(`https://api.music.apple.com/v1/me/library/playlists/${playlistId}/tracks`, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc0MzhSRjk3NTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJDNjU4Vzc3RFk4IiwiaWF0IjoxNzQxNTYxMzgwLCJleHAiOjE3NTEzMjgwMDB9.cAagA4ENdoK2CiR_OOdfz3xfes9ra1B_QET8LsCynJt3pqaID6dEr79RajYeDHb_q4yZfhb3V5HmLOff1XBoLA`,
+            Authorization: `Bearer ${appleDev}`,
             'Music-User-Token': currentUser.uToken,
             'Content-Type': 'application/json',
           },
         });
-        console.log("Songs response: ", songsResponse);
+
         const songsJson = await songsResponse.json();
-        console.log("Songs Json: ", songsJson);
+
         if (!songsResponse.ok) {
           console.error(`Error fetching Apple playlist tracks ${playlistId}:`, songsJson);
           continue;
@@ -363,11 +297,6 @@ const AllPlaylists = () => {
         }),
       };
 
-      console.log("Saving playlist:", playlist);
-//      console.log("TESTING CURRENTUSER: ", currentUser.uToken);
-//      console.log("2: ", currentUser);
-      console.log("3: ", currentUser.id);
-
 
       await set(playlistRef, playlist);
 
@@ -396,7 +325,6 @@ const AllPlaylists = () => {
   const showPopup = () => setVisible(true);
   const hidePopup = () => setVisible(false);
 
-//   const [checked, setChecked] = useState(false);
   const [checkedPlaylists, setCheckedPlaylists] = useState<string[]>([]);
 
   const togglePlaylist = (playlistId: string) => {
@@ -429,7 +357,8 @@ const AllPlaylists = () => {
             const isSelected = checkedPlaylists.includes(item.id);
             return(            
                 <List.Item
-                    onPress={() => router.push(`/playlist?id=${item.id}`)}
+//                    onPress={() => router.push(`/playlist?id=${item.id}`)}
+                    onPress={() => router.push(`/playlist?id=${playlist.id}`)}
                     title={() => (
                         <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
                         {item.name}

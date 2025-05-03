@@ -1,42 +1,51 @@
 // src/services/spotifyAuth.ts
 import { app, database } from "../config/firebase";
-import { ref, set } from "firebase/database";
+import { ref, set, update } from "firebase/database";
 
-const CLIENT_ID = "9c9e9ac635c74d33b4cec9c1e6878ede";
+const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 
-export const refreshSpotifyToken = async (spotifyUserId: string, refreshToken: string): Promise<string | null> => {
+export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: string) => {
   try {
+    console.log("Starting token refresh process");
+    const url = "https://accounts.spotify.com/api/token";
     const params = new URLSearchParams({
-      client_id: CLIENT_ID,
-      grant_type: "refresh_token",
+      grant_type:'refresh_token',
       refresh_token: refreshToken,
+      client_id: CLIENT_ID,
     });
 
-    const response = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-    });
+    const body = params.toString();
+
+    const payload = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body,
+    };
+    console.log('Payload body:', params);
+    console.log('Payload body as string:', params.toString());
+    console.log('Refresh token value:', refreshToken);
+    const response = await fetch(url, payload);
 
     const tokenData = await response.json();
+    console.log("Token refresh response:", tokenData); // Debug log
+
     if (tokenData.error) {
       console.error("Error refreshing token:", tokenData);
       return null;
     }
 
-    console.log("Refreshed Spotify Token:", tokenData.access_token);
-
     // Update Firebase Realtime Database
-    const userRef = ref(database, `users/${spotifyUserId}`);
-    await set(userRef, {
-      spotifyAccessToken: tokenData.access_token,
+    const userRef = ref(database, `users/${firebaseUid}/Spotify`);
+    await update(userRef, {
+      accessToken: tokenData.access_token, // Fix: was tokenData.accessToken
       expiresAt: Date.now() + tokenData.expires_in * 1000,
-      // You might want to retain the refresh token too if it's provided
     });
 
     return tokenData.access_token;
   } catch (error) {
     console.error("Token refresh error:", error);
-    return null;
+    throw error; // Rethrow to handle in calling function
   }
 };

@@ -1,6 +1,7 @@
 export type UserRef = {
     id: string;
     name: string;
+    uToken?: string;
   };
   
   export type User = {
