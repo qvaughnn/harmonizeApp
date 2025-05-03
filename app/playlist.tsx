@@ -876,7 +876,10 @@ export default function PlaylistScreen() {
              Export to Spotify
            </Text>
          </Pressable>
-         <Pressable>
+         <Pressable onPress={() => {
+            const userRef = ref(database, `users/${currentUser.id}/AppleMusic/uToken`);
+            exportToAppleMusic(playlist.id, "", userRef)
+         }}>
            <Text style={styles.exportText}>
              Export to Apple Music
            </Text>
