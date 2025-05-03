@@ -1,4 +1,5 @@
 // src/services/spotifyAuth.ts
+import { router } from "expo-router";
 import { app, database } from "../config/firebase";
 import { ref, set, update } from "firebase/database";
 
@@ -30,6 +31,8 @@ export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: str
 
     if (tokenData.error) {
       console.error("Error refreshing token:", tokenData);
+      console.log("Redirecting to connect");
+      router.replace('./connect');
       return null;
     }
 

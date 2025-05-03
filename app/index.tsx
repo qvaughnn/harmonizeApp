@@ -63,20 +63,21 @@ export default function Authentication() {
                 console.log("Token Refreshed: ", token);
               } catch (error) {
                 console.error("Error refreshing token:", error);
+                return;
               }
             } else {
               setToken(spotifyData.accessToken);
             }
-            console.log("Now going to home")
-            // Navigate to home page
-            router.replace('/(tabs)/home');
-     //     } else if (appleSnap.exists()){
-     //       console.log("GOING HOME");
-     //       router.replace('/(tabs)/home');
+            if (token != null) {
+              setToken(spotifyData.accessToken);
+              console.log("Now going to home");
+              // Navigate to home page
+              router.replace('/(tabs)/home');
+            }
           } else {
             // No music service connected yet
-            console.log("No music service connected yet")
-            router.replace('./connect');
+            console.log("No music service connected yet");
+            router.replace('/connect');
           }
         } else {
           if (appleSnap.exists()){
