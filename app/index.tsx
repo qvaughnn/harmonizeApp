@@ -15,7 +15,7 @@ export default function Authentication() {
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const router = useRouter();
-  const { setToken, setCurrentUser } = useAuth();
+  const { token, setToken, setCurrentUser } = useAuth();
   const auth = getAuth();
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const [showSplash, setShowSplash] = useState(true);
@@ -43,7 +43,6 @@ export default function Authentication() {
           const userSpotifyRef = ref(database, `users/${userCredential.user.uid}/Spotify`);
           const spotifySnapshot = await get(userSpotifyRef);
           const spotifyData = spotifySnapshot?.val();
-
           // If Spotify token exists, check if it needs refresh
           if (spotifyData && spotifyData.accessToken) {
             console.log("Found Spotify data:", spotifyData)
@@ -53,13 +52,15 @@ export default function Authentication() {
               // Token is expired, refresh it
               try {
                 // router.replace('/connect');
+                console.log("Expired Token: ", spotifyData.accessToken);
                 setToken(await refreshSpotifyToken(userCredential.user.uid, spotifyData.refreshToken));
-                console.log("Spotify token refresh completed");
+                console.log("Token Refreshed: ", token);
               } catch (error) {
                 console.error("Error refreshing token:", error);
               }
+            } else {
+              setToken(spotifyData.accessToken);
             }
-            setToken(spotifyData.accessToken);
             console.log("Now going to home")
             // Navigate to home page
             router.replace('/(tabs)/home');
