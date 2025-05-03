@@ -15,7 +15,7 @@ export default function Authentication() {
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const router = useRouter();
-  const { setToken, setCurrentUser } = useAuth();
+  const { token, setToken, setCurrentUser } = useAuth();
   const auth = getAuth();
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const [showSplash, setShowSplash] = useState(true);
@@ -27,7 +27,7 @@ export default function Authentication() {
       
       if (isLogin) {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log("Logged in" + userCredential.user + userCredential.user.uid)
+        console.log("Logged in" + userCredential.user.uid)
 
         // Check if user has linked music services
         const userRef = ref(database, `users/${userCredential.user.uid}/profile`);
@@ -59,13 +59,14 @@ export default function Authentication() {
               // Token is expired, refresh it
               try {
                 // router.replace('/connect');
+                console.log("Expired Token: ", spotifyData.accessToken);
                 setToken(await refreshSpotifyToken(userCredential.user.uid, spotifyData.refreshToken));
-                console.log("Spotify token refresh completed");
+                console.log("Token Refreshed: ", token);
               } catch (error) {
                 console.error("Error refreshing token:", error);
               }
+            } else {
               setToken(spotifyData.accessToken);
-              console.log("Token SET: ", spotifyData.accessToken);
             }
             console.log("Now going to home")
             // Navigate to home page
@@ -97,7 +98,7 @@ export default function Authentication() {
       } else {
         // New user registration
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log("Signed up" + userCredential.user + userCredential.user.uid)
+        console.log("Signed up" + userCredential.user.uid)
         //Not sure about this yet
 //      const friendCode = await generateUniqueFriendCode();          // new util (see §4)
 //      await set(userRef, { email, displayName: email, friendCode });
