@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, Image, FlatList, Pressable, Modal, Animated } from 'react-native';
-import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon } from 'react-native-paper';
+import { StyleSheet, View, Image, FlatList, Pressable, Modal, Animated, ScrollView } from 'react-native';
+import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon, Card, Button} from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 import { database } from './config/firebase';
-import { ref, onValue, set, get, update } from 'firebase/database';
 import { Playlist, Song, UserRef } from '@/types';
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
 
 // Local type for Spotify track search results
 type SpotifyTrack = {
@@ -323,6 +323,37 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
+export async function getFriends(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await get(ref(database, `friends/${userId}`));
+    if (snapshot.exists()) {
+      return Object.keys(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting friends:", error);
+    return [];
+  }
+}
+
+async function addHarmonizer(id: string, playlist: string): Promise<boolean> {
+  try {
+    const userRef = ref(database, `users/${id}/profile/displayName`);
+    const name = await get(userRef);
+    const playlistRef = ref(database, `playlists/${playlist}/harmonizers`);
+    const harmonizerRef = push(playlistRef);
+    const harmonizer = {
+      id: id,
+      name: name.val(),
+    };
+    await set(harmonizerRef, harmonizer)
+    return true;
+  } catch (error) {
+    console.error("Error adding harmonizer:", error);
+    return false;
+  }
+}
+
 // used as input to converter functions
 type SongMatchInput = {
   name: string;
@@ -517,7 +548,9 @@ export async function getBestSpotifyMatch(
 export default function PlaylistScreen() {
   const router = useRouter();
   const { currentUser, token } = useAuth();
+  const id = currentUser!.id;
   const { id: playlistId } = useLocalSearchParams();
+  const playlistIdCorrect = Array.isArray(playlistId) ? playlistId.join(", ") : playlistId;
 
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -540,7 +573,30 @@ export default function PlaylistScreen() {
 
   // Adding Collaborators
   const [addCollab, setAddCollab] = useState(false);
-  const [friendsResults, setFriendsResults] = useState<User[]>([]);
+
+  const [friends, setFriends] = useState<{ id: string; code: string }[]>([]);
+
+   useEffect(() => {
+      const friendsRef = ref(database, `friends/${id}`);
+  
+      const unsubFriends = onValue(friendsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const friendIds = Object.keys(snapshot.val());
+          const friendCodePromises = friendIds.map(async (friendId) => {
+            const codeSnap = await get(ref(database, `users/${friendId}/profile/displayName`));
+            return {
+              id: friendId,
+              code: codeSnap.exists() ? String(codeSnap.val()) : "Unknown"
+            };
+          });
+  
+          Promise.all(friendCodePromises).then(setFriends);
+        } else {
+          setFriends([]);
+        }
+      });
+    }, [id]);
+
 
   // Pin playlist name when scrolling
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -722,6 +778,13 @@ export default function PlaylistScreen() {
     setConfirmRemoveVisible(false);
   }
 
+  const handleAdd = (friendId: string, playlistId:string) => {
+    console.log("hi");
+    addHarmonizer(friendId, playlistId);
+    console.log('friend added to playlist:', friendId);
+    setAddCollab(false);
+  }
+
   // Successful Add Timed Popup
   useEffect(() => {
     if (successModal) {
@@ -748,6 +811,7 @@ export default function PlaylistScreen() {
   }
 
   return (
+    
     <ThemedView style={styles.overall}>
 
       <Animated.View
@@ -1005,36 +1069,27 @@ export default function PlaylistScreen() {
       {/* Search and Add for friends Modal */}
       <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
         <View style={styles.modalContent}>
-          <Searchbar
-            placeholder="Search for Harmonizers"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={styles.searchbar}
-          />
+          <Text variant="displaySmall" style={styles.addFreindsTitle}>
+
+          Add Friends to Playlist</Text>
           <IconButton
             icon="close"
             size={30}
             onPress={() => setAddCollab(false)}
             style={styles.closeinbar}
           />
-          {searchLoading ? (
-            <ActivityIndicator animating size="small" />
-          ) : (
-            <FlatList
-              data={friendsResults}
-              keyExtractor={t => t.id}
-              style={{ maxHeight: 300 }}
-              renderItem={({ item }) => (
-                <List.Item
-                  title={item.id}
-                  left={() => (
-                    <Image source={require('../assets/images/avatar.png')} style={styles.thumbnail} />
-                  )}
-                  onPress={() => router.push(`/friendProfile?id=${item.id}`)}
-                />
-              )}
-            />
-          )}
+          <ScrollView style={styles.friendList}>
+                  {friends.map((friend) => (
+                    <Card key={friend.id} style={styles.friendCard}>
+                      <Card.Content style={styles.friendInfo}>
+                        <Text style={styles.friendName}>{friend.code}</Text>
+                      </Card.Content>
+                      <Card.Actions>
+                        <Button onPress={() => handleAdd(friend.id, playlistIdCorrect)}>Add</Button>
+                      </Card.Actions>
+                    </Card>
+                  ))}
+            </ScrollView>
 
         </View>
       </Modal>
@@ -1125,7 +1180,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   trackArtist: {
-    color: 'grey',
+    color: '#DADADA',
     fontSize: 14,
   },
   editIcon: {
@@ -1295,4 +1350,33 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(150, 144, 144, 0.8)', // semi-transparent black
   },
+  friendList: {
+    top: 80,
+    right: 20
+  },
+  friendCard: {
+    backgroundColor: 'purple',
+    borderWidth: 1,
+    borderColor: 'white',
+    marginBottom: 15,
+    paddingLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    // width: 250
+  },
+  friendInfo: {
+    flex: 1,
+  },
+  friendName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white'
+  },
+  addFreindsTitle:{
+    fontWeight: 'bold',
+    color: 'white'
+  }
 });

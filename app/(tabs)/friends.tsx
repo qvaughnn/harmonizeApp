@@ -188,7 +188,6 @@ async function getFriendCode(id: string): Promise<string> {
 const Friends = () => {
   const { currentUser } = useAuth();
   const id = currentUser!.id;
-  // console.log('friends at load:', getFriends(id));
 
   const [friends, setFriends] = useState<{ id: string; code: string }[]>([]);
   const [received, setReceived] = useState<{ id: string; code: string }[]>([]);
