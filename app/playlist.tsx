@@ -672,6 +672,19 @@ export default function PlaylistScreen() {
     }
   };
 
+  const exportToSpotifyPressable = async () => {
+    if (!playlistId || !token) {
+      console.error("Playlist ID or Spotify Token null");
+    }
+
+    try {
+      const idStr = Array.isArray(playlistId) ? playlistId.join(", ") : playlistId;
+      const result = await exportToSpotify(idStr, token || '');
+    } catch (error) {
+      console.error("Spotify export failed:", error)
+    }
+  }
+
   // Add selected track to playlist
   const selectTrack = async (track: SpotifyTrack) => {
     if (!playlistId || !currentUser || !playlist) return;
@@ -737,24 +750,24 @@ export default function PlaylistScreen() {
   return (
     <ThemedView style={styles.overall}>
 
-    <Animated.View
-      style={[
-        styles.floatingTitleContainer,
-        {
-          transform: [{ translateY: titleTopOffset }],
-        },
-      ]}
-    >
       <Animated.View
         style={[
-          styles.floatingTitleBackground,
-          { opacity: headerBackgroundOpacity },
+          styles.floatingTitleContainer,
+          {
+            transform: [{ translateY: titleTopOffset }],
+          },
         ]}
-      />
-      <Animated.Text style={[styles.floatingTitleText, { fontSize: titleFontSize }]}>
-        {playlist.name}
-      </Animated.Text>
-    </Animated.View>
+      >
+        <Animated.View
+          style={[
+            styles.floatingTitleBackground,
+            { opacity: headerBackgroundOpacity },
+          ]}
+        />
+        <Animated.Text style={[styles.floatingTitleText, { fontSize: titleFontSize }]}>
+          {playlist.name}
+        </Animated.Text>
+      </Animated.View>
 
       <Animated.FlatList
         data={playlist.songs}
@@ -766,130 +779,130 @@ export default function PlaylistScreen() {
         )}
         scrollEventThrottle={16}
         ListHeaderComponent={(
-        <View>
-          
-          <View style={styles.headerContainer}>
-            <IconButton
-              icon="arrow-left"
-              size={30}
-              onPress={() => router.back()}
-              style={styles.backButton}
-              iconColor="grey"
-            />
-          </View>
+          <View>
 
-          <View style={styles.coverContainer}>
-            {playlist.cover_art && (
-              <Image
-                source={
-                  typeof playlist.cover_art === 'string'
-                    ? { uri: playlist.cover_art }
-                    : playlist.cover_art
-                }
-                style={styles.coverImage}
-              />
-            )}
-            <View>
-              <Text style={styles.owner}>
-                Owner: { (playlist.owner as UserRef).name }
-                {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
-              </Text>
-              {playlist.description ? (
-                <Text style={styles.description}>{playlist.description}</Text>
-              ) : null} 
-
-          <View style={styles.exportEditContainer}>
-            {/* <Pressable onPress={() => router.push('/friends')}> */}
-              {/* <Text style={styles.export}>Export</Text> */}
+            <View style={styles.headerContainer}>
               <IconButton
-                icon="export-variant"
-                size={28}
-                onPress={()=>setExportVisible(true)}
-                iconColor="white"
+                icon="arrow-left"
+                size={30}
+                onPress={() => router.back()}
+                style={styles.backButton}
+                iconColor="grey"
               />
-            {/* </Pressable> */}
+            </View>
 
-            {/* Add Collaborator Button */}
-            <IconButton
-            icon="account-multiple-plus"
-            size={28}
-            onPress={() => {
-              // Open add collaborator modal or screen
-              console.log('Add collaborator pressed')
-              setAddCollab(true)
-            }}
-            iconColor="white"
-          />
+            <View style={styles.coverContainer}>
+              {playlist.cover_art && (
+                <Image
+                  source={
+                    typeof playlist.cover_art === 'string'
+                      ? { uri: playlist.cover_art }
+                      : playlist.cover_art
+                  }
+                  style={styles.coverImage}
+                />
+              )}
+              <View>
+                <Text style={styles.owner}>
+                  Owner: {(playlist.owner as UserRef).name}
+                  {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
+                </Text>
+                {playlist.description ? (
+                  <Text style={styles.description}>{playlist.description}</Text>
+                ) : null}
 
-            {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
-              {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
-              <IconButton
-                icon ="pencil"
-                onPress = { () => {
-                  setEditMode(prev => !prev);
-                  
-                } }
-                size={28}
-                iconColor="white"
-              />
-            {/* </Pressable> */}
+                <View style={styles.exportEditContainer}>
+                  {/* <Pressable onPress={() => router.push('/friends')}> */}
+                  {/* <Text style={styles.export}>Export</Text> */}
+                  <IconButton
+                    icon="export-variant"
+                    size={28}
+                    onPress={() => setExportVisible(true)}
+                    iconColor="white"
+                  />
+                  {/* </Pressable> */}
+
+                  {/* Add Collaborator Button */}
+                  <IconButton
+                    icon="account-multiple-plus"
+                    size={28}
+                    onPress={() => {
+                      // Open add collaborator modal or screen
+                      console.log('Add collaborator pressed')
+                      setAddCollab(true)
+                    }}
+                    iconColor="white"
+                  />
+
+                  {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
+                  {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
+                  <IconButton
+                    icon="pencil"
+                    onPress={() => {
+                      setEditMode(prev => !prev);
+
+                    }}
+                    size={28}
+                    iconColor="white"
+                  />
+                  {/* </Pressable> */}
+                </View>
+              </View>
             </View>
           </View>
+
+        )}
+        renderItem={({ item }) => (
+          <View style={styles.trackItem}>
+            {item.cover_art ? (
+              <Image source={{ uri: item.cover_art }} style={styles.trackImage} />
+            ) : null}
+            <View style={styles.trackInfo}>
+              <Text style={styles.trackName}>{item.name}</Text>
+              <Text style={styles.trackArtist}>{item.artist}</Text>
+            </View>
+            {editMode && (
+              <IconButton
+                icon="minus-circle"
+                size={24}
+                onPress={() => {
+                  setSelectedSongToRemove(item);
+                  setConfirmRemoveVisible(true);
+                }}
+                iconColor="white"
+              />
+            )}
+          </View>
+        )}
+      />
+      {/* Export Modal */}
+      <Modal
+        visible={exportVisible}
+        transparent={true}
+        animationType='fade'
+        onDismiss={() => setExportVisible(false)}>
+        <View style={styles.exportWrap}>
+          <View style={styles.exportContent}>
+            <Pressable onPress={exportToSpotifyPressable}>
+              <Text style={styles.exportText}>
+                Export to Spotify
+              </Text>
+            </Pressable>
+            <Pressable>
+              <Text style={styles.exportText}>
+                Export to Apple Music
+              </Text>
+            </Pressable>
+            <View style={{ marginTop: 10, alignItems: 'center' }}>
+              <Pressable onPress={() => setExportVisible(false)}>
+                <Text style={styles.exportClose}>
+                  Cancel
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-          
-        )}
-            renderItem={({ item }) => (
-              <View style={styles.trackItem}>
-                {item.cover_art ? (
-                  <Image source={{ uri: item.cover_art }} style={styles.trackImage} />
-                ) : null}
-                <View style={styles.trackInfo}>
-                  <Text style={styles.trackName}>{item.name}</Text>
-                  <Text style={styles.trackArtist}>{item.artist}</Text>
-                </View>
-                {editMode && (
-                <IconButton
-                  icon="minus-circle"
-                  size={24}
-                  onPress={() => {
-                    setSelectedSongToRemove(item);
-                    setConfirmRemoveVisible(true);
-                  }}
-                  iconColor="white"
-                />
-                )}
-              </View>
-            )}
-          />
-     {/* Export Modal */}
-     <Modal 
-      visible={exportVisible}
-      transparent = {true}
-      animationType='fade'
-      onDismiss={() => setExportVisible(false)}>
-      <View style={styles.exportWrap}>
-       <View style={styles.exportContent}>
-         <Pressable>
-           <Text style={styles.exportText}>
-             Export to Spotify
-           </Text>
-         </Pressable>
-         <Pressable>
-           <Text style={styles.exportText}>
-             Export to Apple Music
-           </Text>
-         </Pressable>
-        <View style={ {marginTop: 10, alignItems: 'center'} }>
-         <Pressable onPress={() => setExportVisible(false)}>
-           <Text style={styles.exportClose}>
-             Cancel
-           </Text>
-         </Pressable>
-        </View>
-       </View>
-      </View>
-     </Modal>
+      </Modal>
       {/*Potential Edit Playlist Button (Options to remove song etc))}
       {/* <IconButton
         icon="pencil-circle"
@@ -953,7 +966,7 @@ export default function PlaylistScreen() {
               )}
             />
           )}
-          
+
         </View>
       </Modal>
 
@@ -962,14 +975,14 @@ export default function PlaylistScreen() {
         <ThemedView style={styles.confirmModal}>
           <Text style={styles.confirmText}>
             Are you sure you want to remove{' '}
-            <Text style={{ fontWeight: 'bold', color:'white'}}>{selectedSongToRemove?.name}</Text>?
+            <Text style={{ fontWeight: 'bold', color: 'white' }}>{selectedSongToRemove?.name}</Text>?
           </Text>
           <View style={styles.buttonContainer}>
             <Pressable style={styles.confirmButton} onPress={() => selectedSongToRemove && removeSong(selectedSongToRemove)}>
-               <Text style={styles.confirmButtonText}>Yes</Text> 
+              <Text style={styles.confirmButtonText}>Yes</Text>
             </Pressable>
             <Pressable style={styles.cancelButton} onPress={() => setConfirmRemoveVisible(false)}>
-               <Text style={styles.cancelButtonText}>Cancel</Text> 
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
           </View>
         </ThemedView>
@@ -977,20 +990,20 @@ export default function PlaylistScreen() {
 
       {/* Successful adding */}
       <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
-      <View style={styles.modalWrap}>
-        <View style={styles.modalBoxSuccess}>
-          <IconButton
-            icon='check'
-            size={60}
-            iconColor='black'
-          />
-          <Text variant="titleLarge">Successfully Added!</Text>
+        <View style={styles.modalWrap}>
+          <View style={styles.modalBoxSuccess}>
+            <IconButton
+              icon='check'
+              size={60}
+              iconColor='black'
+            />
+            <Text variant="titleLarge">Successfully Added!</Text>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
 
-    {/* Search and Add for friends Modal */}
-    <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
+      {/* Search and Add for friends Modal */}
+      <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
         <View style={styles.modalContent}>
           <Searchbar
             placeholder="Search for Harmonizers"
@@ -1015,14 +1028,14 @@ export default function PlaylistScreen() {
                 <List.Item
                   title={item.id}
                   left={() => (
-                    <Image source={ require('../assets/images/avatar.png') } style={styles.thumbnail} />
+                    <Image source={require('../assets/images/avatar.png')} style={styles.thumbnail} />
                   )}
                   onPress={() => router.push(`/friendProfile?id=${item.id}`)}
                 />
               )}
             />
           )}
-          
+
         </View>
       </Modal>
 
@@ -1121,20 +1134,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'flex-start',
   },
-   addIcon: { 
-    position: 'absolute', 
-    right: 20, 
+  addIcon: {
+    position: 'absolute',
+    right: 20,
     bottom: 40
   },
-   modalContent: { 
-    backgroundColor: 'white', 
+  modalContent: {
+    backgroundColor: 'white',
     padding: 30,
-    margin: 20, 
+    margin: 20,
     borderRadius: 8,
     height: '80%',
     top: 70
   },
-   searchbar: { 
+  searchbar: {
     marginBottom: -40,
     width: '90%'
   },
@@ -1162,7 +1175,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: 'white',
   },
-  buttonContainer:{
+  buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     width: '100%',
@@ -1190,7 +1203,7 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 16,
   },
-  
+
   cancelButtonText: {
     color: 'black',
     fontSize: 16,
@@ -1234,7 +1247,7 @@ const styles = StyleSheet.create({
   exportClose: {
     fontSize: 15,
     marginBottom: 20,
-  }, 
+  },
   modalBoxSuccess: {
     backgroundColor: 'white',
     opacity: 0.7,

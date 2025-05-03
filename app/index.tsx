@@ -59,12 +59,13 @@ export default function Authentication() {
                 console.error("Error refreshing token:", error);
               }
             }
-            console.log("Now going to home")
+            setToken(spotifyData.accessToken);
+            console.log("Now going to home");
             // Navigate to home page
             router.replace('/(tabs)/home');
           } else {
             // No music service connected yet
-            console.log("No music service connected yet")
+            console.log("No music service connected yet");
             router.replace('/connect');
           }
         } else {
