@@ -8,33 +8,38 @@ import React, { useEffect, useState } from 'react';
 import { database } from '../config/firebase';
 import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
 import { ref, set, get, onValue, push } from 'firebase/database';
+import { useMusicService } from '../../contexts/MusicServiceContext';
 
 const { width } = Dimensions.get('window');
 
 const Home = () => {
-
-  const { currentUser } = useAuth(); 
+  const { currentUser } = useAuth();
   const router = useRouter();
-  const { token } = useAuth(); 
+  const { token } = useAuth();
   const [results, setResults] = useState<PlaylistPreview[]>([]);
-  const [images, setImages] = useState<{ id: string; uri: string }[]>([]);
-
-  // useEffect(() => {
-  //   if (token) {
-  //     fetchPlaylists();
-  //   }
-  // }, [token]);
+  const { setMusicService, musicService } = useMusicService();
 
   const friends = [
     {name: 'Alice', playlists: 4, avatar:require('../../assets/images/avatar.png')},
     {name: 'Charlie', playlists: 2, avatar:require('../../assets/images/avatar.png')},
-    {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')}, 
-  ]
+    {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')},
+  ];
 
+
+  console.log("Curr user: ", currentUser.id);
   // Fetch playlists the user has access to from Firebase
   useEffect(() => {
     if (!currentUser?.id) return;
     const userPlaylistsRef = ref(database, `users/${currentUser.id}/userPlaylists`);
+    const userSpotRef = ref(database, `users/${currentUser.id}/Spotify`);
+    console.log("MusicService1: ", musicService);
+    get(userSpotRef).then((snapshot) => {
+      if (!snapshot.exists()) {
+        setMusicService('AppleMusic');
+      }
+    });
+    console.log("MusicService2: ", musicService);
+    console.log("In home.tsx: ", userPlaylistsRef);
     const unsubscribe = onValue(
       userPlaylistsRef,
       async (snapshot) => {
@@ -67,7 +72,7 @@ const Home = () => {
     router.push(`/playlist?id=${playlistId}`);
   };
 
-  const renderCarouselItem = ({ item }: { item: { id: string; uri: any } }) => (
+  const renderCarouselItem = ({ item }: { item: PlaylistPreview }) => (
     <Pressable onPress={() => handlePlaylistPress(item.id)}>
       <Card style={{ borderRadius: 10 }}>
         <View style={{ borderRadius: 10, overflow: 'hidden' }}>
@@ -97,7 +102,7 @@ const Home = () => {
 
   const toggleModal = () => {
     setModalVisible(!modalVisbile);
-  }
+  };
 
   const [visible, setVisible] = useState(false);
 
@@ -135,19 +140,19 @@ const Home = () => {
         <Text style={styles.view}>View all</Text>
       </Pressable>
 
-      <View style = {styles.listContainer}>
-          {friends.map((friend,index) =>(
-            <Card key={index} style={styles.friendCard}>
-              <View style = {styles.friendInfo}>
-                <Avatar.Image size={40} source = {friend.avatar}/>
-                <View style = {styles.textContainer}>
-                  <Text style = {styles.friendName}> {friend.name}</Text>
-                  <Text style = {styles.playlistText}> {friend.playlists} playlists</Text>
-                </View>
-              </View> 
-            </Card>
-          ))}
-        </View>
+      <View style={styles.listContainer}>
+        {friends.map((friend,index) => (
+          <Card key={index} style={styles.friendCard}>
+            <View style={styles.friendInfo}>
+              <Avatar.Image size={40} source={friend.avatar}/>
+              <View style={styles.textContainer}>
+                <Text style={styles.friendName}>{friend.name}</Text>
+                <Text style={styles.playlistText}>{friend.playlists} playlists</Text>
+              </View>
+            </View>
+          </Card>
+        ))}
+      </View>
 
       <IconButton
         icon="information-outline"
@@ -158,9 +163,9 @@ const Home = () => {
       />
 
       <Modal
-        animationType = 'fade'
-        transparent = {true}
-        visible = {modalVisbile}
+        animationType="fade"
+        transparent={true}
+        visible={modalVisbile}
         onRequestClose={toggleModal} // handles back button
       >
         <View style={styles.centeredView}>
@@ -170,12 +175,10 @@ const Home = () => {
             <Button title="Got it!" onPress={toggleModal} />
           </View>
         </View>
-
       </Modal>
-      
     </ThemedView>
   );
-}
+};
 
 export default Home;
 
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
     top: 515,
     right: 25,
   },
-  listContainer:{
+  listContainer: {
     width: '100%',
     flexWrap: 'wrap',
     paddingHorizontal: 20,
@@ -241,7 +244,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 25
   },
-  friendCard:{
+  friendCard: {
     width: '70%',
     height: 50,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
@@ -251,19 +254,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingLeft: 10,
   },
-  friendInfo:{
+  friendInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  textContainer:{
-    marginLeft:12,
+  textContainer: {
+    marginLeft: 12,
   },
-  friendName:{
+  friendName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: 'white'
   },
-  playlistText:{
+  playlistText: {
     fontSize: 14,
     color: 'white'
   },
@@ -296,5 +299,5 @@ const styles = StyleSheet.create({
     bottom: 100,
     position: 'absolute',
     justifyContent: 'flex-start',
-   },
+  },
 });

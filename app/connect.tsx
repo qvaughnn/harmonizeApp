@@ -6,8 +6,16 @@ import { useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { ref, set, get, } from "firebase/database";
 import { useAuth } from "../contexts/AuthContext";
-import { database } from "./config/firebase";
+import { database, fireDB } from "./config/firebase";
 import { useRouter } from 'expo-router';
+import { useMusicService } from '../contexts/MusicServiceContext';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { decode as atob } from 'base-64';
+import { getFirestore } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
+
+
 
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 const REDIRECT_URI = 'exp://10.141.174.39:8081';
@@ -40,6 +48,7 @@ async function generateUniqueFriendCode(): Promise<string> {
 export default function ConnectScreen() {
   const { setToken, setSpotifyUserId, setCurrentUser } = useAuth();
   const router = useRouter();
+  const { setMusicService } = useMusicService();
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -70,6 +79,54 @@ export default function ConnectScreen() {
     return () => unsubscribe();
   }, []);
 
+
+  const handleAppleMusicLogin = async () => {
+    console.log("Starting Apple Music authentication");
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        'https://tangerine-scone-fefb23.netlify.app',
+        'myapp://auth'
+      );
+
+      if (result.type === 'success' && result.url.includes('token=')) {
+        console.log("Apple Music authentication successful");
+        const { queryParams } = Linking.parse(result.url);
+        const encodedToken = queryParams?.token;
+
+        console.log("Encoded token:", encodedToken);
+        const decodedBase64 = decodeURIComponent(encodedToken);
+        const userToken = atob(decodedBase64);
+        console.log("Decoded token:", userToken);
+
+        setMusicService('AppleMusic');
+        setSpotifyUserId(userToken);
+
+        // Store Apple Music token in Firebase if needed
+        const firebaseUser = getAuth().currentUser;
+        if (firebaseUser) {
+          await set(ref(database, `users/${firebaseUser.uid}/AppleMusic`), {
+            uToken: userToken,
+            expiresAt: Date.now() + 3600 * 1000 // 1 hour expiration
+          });
+        }
+
+        setCurrentUser({
+          id: firebaseUser.uid ??  'Unknown User ID',
+          name: 'Apple User',
+          uToken: userToken,
+        });
+
+        router.push({
+          pathname: '/setUsername',
+          params: { userToken }
+        });
+      } else {
+        console.log('Apple Music authentication cancelled or failed:', result);
+      }
+    } catch (error) {
+      console.error("Apple Music authentication error:", error);
+    }
+  };
 
   // Exchange code for token and store user data in Firebase
   const exchangeCodeForToken = async (code: string) => {
@@ -120,6 +177,7 @@ export default function ConnectScreen() {
 
       const spotifyUserId = userProfile.id;
       setSpotifyUserId(spotifyUserId);
+      setMusicService('Spotify');
 
       // Authenticate user with Firebase 
       const firebaseUser = getAuth().currentUser;
@@ -188,7 +246,7 @@ export default function ConnectScreen() {
         style={styles.appleButton}
         mode="elevated"
         labelStyle={{ color: 'black', fontWeight: 'bold', fontSize: 17, }}
-        // onPress={}
+        onPress={handleAppleMusicLogin}
         >
         LOG IN WITH APPLE MUSIC
       </Button>

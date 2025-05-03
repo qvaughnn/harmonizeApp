@@ -5,6 +5,10 @@ import { Text, Searchbar, List, Button, IconButton, Modal, TextInput } from 'rea
 import { useAuth } from '../../contexts/AuthContext';
 import { GestureHandlerRootView, FlatList } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
+
+//import { app, database } from "../config/firebase";
+//import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot } from "firebase/database";
+import { useMusicService } from '../../contexts/MusicServiceContext';
 import { database } from '../config/firebase';
 import { ref, set, get, onValue, push } from 'firebase/database';
 import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
@@ -17,6 +21,13 @@ const AllPlaylists = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<PlaylistPreview[]>([]);
   const [filteredResults, setFilteredResults] = useState<PlaylistPreview[]>([]);
+  const { musicService } = useMusicService();
+
+
+  useEffect(() => {
+    console.log('musicService changed to:', musicService);
+  }, [musicService]);  
+  
 
     // Fetch playlists the user has access to from Firebase
     useEffect(() => {
@@ -100,6 +111,7 @@ const AllPlaylists = () => {
   const [playlistName, setPlaylistName] = useState('');
   const showPopup = () => setVisible(true);
   const hidePopup = () => setVisible(false);
+
 
   const closeNewPlaylistModal = () => {
     hidePopup();

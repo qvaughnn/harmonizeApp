@@ -3,16 +3,24 @@ import { ThemedView } from '@/components/ThemedView';
 import { Text , TextInput, Button, Avatar} from 'react-native-paper';
 import { useState, useEffect, useContext } from 'react';
 import { useAuth } from '../contexts/AuthContext'; 
+import { useMusicService } from '../contexts/MusicServiceContext';
+import { useRouter } from 'expo-router';
 
 const Profile = () => {
-  const { token, setToken } = useAuth(); 
+  const { token, setToken, currentUser } = useAuth(); 
   const [userData, setUserData] = useState<any>(null);
+  const { musicService } = useMusicService();
+  const { setMusicService } = useMusicService();
+  const router = useRouter();
+
 
   useEffect(() => {
     if (token) {
       fetchUserProfile();
+    } else if (musicService === 'AppleMusic') {
+      fetchAppleMusicProfile();
     }
-  }, [token]);
+  }, [token, musicService]);
 
   const fetchUserProfile = async () => {
     console.log("fetchUserProfile() called");
@@ -37,6 +45,18 @@ const Profile = () => {
     }
   };
 
+  const fetchAppleMusicProfile = async () => {
+    try {
+      console.log("Username : ", currentUser.name);
+      setUserData({
+        display_name: currentUser.name,
+        images: ['../assets/images/appleLogo.png'],
+      });
+    } catch (error) {
+      console.error("Apple Music profile fetch error:", error);
+    }
+  };
+  
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
@@ -48,19 +68,29 @@ const Profile = () => {
         size={180}
         source={userData?.images?.[0]?.url ? { uri: userData.images[0].url } : require('../assets/images/avatar.png')}
       />
-      <Text style={styles.username} variant="headlineMedium">@{userData?.display_name || "username"}</Text>
+      <Text style={styles.username} variant="headlineMedium">@{userData?.display_name || currentUser.name}</Text>
       <Button
         icon="plus"
         style={styles.importButton}
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}>
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}
+        onPress={() => {
+          router.replace('/playlistImport');
+        }}
+      >
           Import Playlist
       </Button>
       <Button
         icon="close"
         style={styles.logOutButton}
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}>
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:15, }}
+        onPress={() => {
+          setToken(null); // Clear auth token
+          setMusicService('Spotify'); // Reset music service
+          router.replace('/'); // Navigate to login screen
+        }}
+      >
           Log Out
       </Button>
     </ThemedView>

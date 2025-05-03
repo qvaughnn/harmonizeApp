@@ -4,11 +4,12 @@ import { GestureHandlerRootView, FlatList } from 'react-native-gesture-handler';
 import { Searchbar, List, IconButton, Button, TextInput, Text, ActivityIndicator } from 'react-native-paper';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '../../contexts/AuthContext';
-import { database } from '../config/firebase';
+import { database, fireDB } from '../config/firebase';
 import { ref, onValue, set, push, get } from 'firebase/database';
+import { useMusicService } from '../../contexts/MusicServiceContext'; // Kept from original code
 import { Playlist, PlaylistPreview, Song, UserRef } from '@/types';
 import { useRouter } from 'expo-router';
-
+import { collection, getDocs } from "firebase/firestore"; 
 
 interface SearchItem {
   id: string;
@@ -26,6 +27,7 @@ const placeholderCover = require('../../assets/images/coverSample.png');
 export default function SearchScreen() {
   const { token, currentUser } = useAuth();
   const router = useRouter();
+  const { musicService } = useMusicService(); // Get the music service from context
 
   // search state
   const [query, setQuery] = useState('');
@@ -43,6 +45,30 @@ export default function SearchScreen() {
 
   // successful modal
   const [successModal, setSuccessModal] = useState(false);
+
+
+  const getFirestore = async () => {
+  const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+  for (const doc of querySnapshot.docs) {
+    const data = doc.data();
+    if (data.devToken) {
+      return data.devToken;
+    }
+  }
+  };
+
+
+  useEffect(() => {
+  const fetchFirestoreData = async () => {
+    try {
+      await getFirestore(); // Call the function here
+    } catch (error) {
+      console.error('Error fetching data from Firestore:', error);
+    }
+  };
+
+  fetchFirestoreData();
+}, []);
 
   // Load user playlists
   useEffect(() => {
@@ -69,12 +95,6 @@ export default function SearchScreen() {
         }));
 
       setUserPlaylists(list);
-      // const list: PlaylistPreview[] = [];
-      // for (const id of ids) {
-      //   const data = await new Promise<any>((resolve) => onValue(ref(database, `playlists/${id}`), s => resolve(s.val()), { onlyOnce: true }));
-      //   if (data) list.push({ id: data.id, name: data.name, cover_art: data.cover_art || placeholderCover });
-      // }
-      // setUserPlaylists(list);
     });
     return () => {
       unsub();
@@ -82,52 +102,113 @@ export default function SearchScreen() {
     }
   }, []);
 
-  // Spotify search
+  // Search functionality with support for both Spotify and Apple Music
   useEffect(() => {
     const fetchData = async () => {
-      if (!token || query.length < 3) { setResults([]); return; }
+      if (query.length < 3) { 
+        setResults([]); 
+        return; 
+      }
+      
       setLoading(true);
+      
       try {
-        const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          const all: SearchItem[] = [
-            ...(data.tracks?.items || []).map((t: any) => ({
-              id: t.id,
-              name: t.name,
-              type: 'track',
-              artists: t.artists,
-              album: t.album,
-              uri: t.uri,
-              duration_ms: t.duration_ms,
-            })),
-            ...(data.albums?.items || []).map((a: any) => ({
-              id: a.id,
-              name: a.name,
-              type: 'album',
-              artists: a.artists,
-              images: a.images,
-            })),
-            ...(data.artists?.items || []).map((ar: any) => ({
-              id: ar.id,
-              name: ar.name,
-              type: 'artist',
-              images: ar.images,
-            })),
-          ];
-          setResults(all);
+        if (musicService !== 'AppleMusic') {
+          // Spotify search
+          if (!token) {
+            console.error("Token is missing for Spotify search!");
+            setLoading(false);
+            return;
+          }
+          
+          const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          const data = await res.json();
+          
+          if (res.ok) {
+            const all: SearchItem[] = [
+              ...(data.tracks?.items || []).map((t: any) => ({
+                id: t.id,
+                name: t.name,
+                type: 'track',
+                artists: t.artists,
+                album: t.album,
+                uri: t.uri,
+                duration_ms: t.duration_ms,
+              })),
+              ...(data.albums?.items || []).map((a: any) => ({
+                id: a.id,
+                name: a.name,
+                type: 'album',
+                artists: a.artists,
+                images: a.images,
+              })),
+              ...(data.artists?.items || []).map((ar: any) => ({
+                id: ar.id,
+                name: ar.name,
+                type: 'artist',
+                images: ar.images,
+              })),
+            ];
+            setResults(all);
+          } else {
+            console.error('Spotify search error', data);
+          }
         } else {
-          console.error('Search error', data);
+          // Apple Music search
+          const appleDev = await getFirestore()
+          const response = await fetch(
+            `https://api.music.apple.com/v1/catalog/us/search?term=${encodeURIComponent(query)}&types=songs,albums,artists&limit=10`,
+            {
+              headers: {
+                Authorization: `Bearer ${appleDev}`,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Apple Music Search Error:", response.status, errorText);
+            return;
+          }
+
+          const data = await response.json();
+          const songs = data.results?.songs?.data || [];
+          const albums = data.results?.albums?.data || [];
+          const artists = data.results?.artists?.data || [];
+
+          const normalizedResults = [...songs, ...albums, ...artists].map((item: any) => ({
+            id: item.id,
+            name: item.attributes?.name || 'Unknown',
+            type: item.type === 'songs' ? 'track' : item.type === 'albums' ? 'album' : 'artist',
+            artists: item.attributes?.artistName ? [{ name: item.attributes.artistName }] : [],
+            images: item.attributes?.artwork?.url
+              ? [{ url: item.attributes.artwork.url.replace('{w}x{h}', '200x200') }]
+              : [],
+            album: item.attributes?.artwork?.url
+              ? { 
+                  images: [{ url: item.attributes.artwork.url.replace('{w}x{h}', '200x200') }],
+                  name: item.attributes?.albumName || 'Unknown Album'
+                }
+              : undefined,
+            uri: item.attributes?.playParams?.catalogId || item.id,
+            duration_ms: item.attributes?.durationInMillis || 0,
+          }));
+
+          setResults(normalizedResults);
         }
       } catch (e) {
         console.error('Search fetch error', e);
-      } finally { setLoading(false); }
+      } finally { 
+        setLoading(false); 
+      }
     };
+    
     const t = setTimeout(fetchData, 300);
     return () => clearTimeout(t);
-  }, [query, token]);
+  }, [query, token, musicService]);
 
   const openPicker = (item: SearchItem) => {
     if (item.type !== 'track') return;
@@ -137,24 +218,40 @@ export default function SearchScreen() {
 
   const addTrackToPlaylist = async (plId: string) => {
     if (!selectedTrack || selectedTrack.type !== 'track') return;
-    const plSnap = await get(ref(database, `playlists/${plId}`));
-    if (!plSnap) return;
-    if (plSnap.val().songs?.some((s: Song) => s.spotify_id === selectedTrack.id)) {
+    const plRef = ref(database, `playlists/${plId}`);
+    const plSnap = await get(plRef);
+    if (!plSnap.exists()) return;
+    
+    const playlist = plSnap.val();
+    
+    // Check if the song already exists in the playlist
+    if (playlist.songs?.some((s: Song) => 
+      s.spotify_id === selectedTrack.id || 
+      (musicService === 'AppleMusic' && s.apple_music_id === selectedTrack.id)
+    )) {
       console.log('Song already exists in playlist');
       setPlaylistModal(false);
       return;
     }
+    
+    // Create song object based on the music service, but using the same structure
     const newSong: Song = {
-      spotify_id: selectedTrack.id,
+      spotify_id: musicService === 'AppleMusic' ? '' : selectedTrack.id,
+      apple_music_id: musicService === 'AppleMusic' ? selectedTrack.id : '',
       name: selectedTrack.name,
       artist: selectedTrack.artists?.map(a => a.name).join(', ') || '',
-      spotify_uri: selectedTrack.uri || '',
+      spotify_uri: musicService === 'AppleMusic' ? '' : (selectedTrack.uri || ''),
+      apple_music_uri: musicService === 'AppleMusic' ? (selectedTrack.uri || '') : '',
       duration_ms: selectedTrack.duration_ms || 0,
-      cover_art: selectedTrack.album?.images[0]?.url || '',
+      cover_art: selectedTrack.album?.images[0]?.url || selectedTrack.images?.[0]?.url || '',
       album: selectedTrack.album?.name || '',
     };
-    const updated = [...(plSnap.val().songs || []), newSong];
-    await set(ref(database, `playlists/${plId}/songs`), updated);
+    
+    // Add the song to the playlist's songs array
+    const songs = playlist.songs || [];
+    const updatedSongs = [...songs, newSong];
+    await set(ref(database, `playlists/${plId}/songs`), updatedSongs);
+    
     setPlaylistModal(false);
     setSelectedTrack(null);
     setSuccessModal(true);
@@ -181,7 +278,6 @@ export default function SearchScreen() {
     setNewName('');
     setNewModal(false);
     addTrackToPlaylist(id);
-    setSuccessModal(true);
   };
 
   // Successful Add Timed Popup
@@ -190,8 +286,9 @@ export default function SearchScreen() {
       const timer = setTimeout(() => {
         setSuccessModal(false);
       }, 500);
+      return () => clearTimeout(timer);
     }
-  })
+  }, [successModal]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

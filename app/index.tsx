@@ -27,18 +27,24 @@ export default function Authentication() {
       
       if (isLogin) {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log("Logged in" + userCredential.user + userCredential.user.uid)
+        console.log("Logged in" + userCredential.user.uid)
 
         // Check if user has linked music services
         const userRef = ref(database, `users/${userCredential.user.uid}/profile`);
         const snapshot = await get(userRef);
+
+        const appleRef = ref(database, `users/${userCredential.user.uid}/AppleMusic`);
+        const appleSnap = await get(appleRef);
+
         
-        if (snapshot.exists()) {
+        if (!appleSnap.exists() && snapshot.exists()){
           const userData = snapshot.val();
           setCurrentUser({
             id: userCredential.user.uid,
             name: userData.displayName || email,
           });
+
+          console.log("LOGGING IN NOW - THIS IS A TEST");
 
           const userSpotifyRef = ref(database, `users/${userCredential.user.uid}/Spotify`);
           const spotifySnapshot = await get(userSpotifyRef);
@@ -64,20 +70,34 @@ export default function Authentication() {
             console.log("Now going to home")
             // Navigate to home page
             router.replace('/(tabs)/home');
+     //     } else if (appleSnap.exists()){
+     //       console.log("GOING HOME");
+     //       router.replace('/(tabs)/home');
           } else {
             // No music service connected yet
             console.log("No music service connected yet")
             router.replace('./connect');
           }
         } else {
+          if (appleSnap.exists()){
+            const userTok = appleSnap.val().uToken;
+            setCurrentUser({
+              id: userCredential.user.uid,
+              name: snapshot.val().name || email,
+              uToken: userTok,
+            });
+            console.log("GOING HOME");
+            router.replace('/(tabs)/home');
+          }
+          else{
           // User exists but no profile
           console.log("User exists but no profile")
-          router.replace('./connect');
-        }
+          router.replace('/connect');
+        }}
       } else {
         // New user registration
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log("Signed up" + userCredential.user + userCredential.user.uid)
+        console.log("Signed up" + userCredential.user.uid)
         //Not sure about this yet
 //      const friendCode = await generateUniqueFriendCode();          // new util (see §4)
 //      await set(userRef, { email, displayName: email, friendCode });

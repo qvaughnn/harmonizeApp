@@ -1,27 +1,33 @@
 import { Image, StyleSheet, Platform, View, ImageBackground, Pressable } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text , TextInput, Button } from 'react-native-paper';
+import { Text, TextInput, Button } from 'react-native-paper';
 import * as AuthSession from 'expo-auth-session';
 import { useEffect, useState } from 'react';
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { useAuth } from "../contexts/AuthContext";
 import { app, database } from "./config/firebase";
+import { useRouter } from 'expo-router';
+import { useMusicService } from "../contexts/MusicServiceContext";
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { decode as atob } from 'base-64';
 
 const auth = getAuth();
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 const REDIRECT_URI = 'exp://10.140.46.209:8081';
 const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
 
-
 const discovery = {
   authorizationEndpoint: 'https://accounts.spotify.com/authorize',
   tokenEndpoint: 'https://accounts.spotify.com/api/token',
 };
 
-export default function HomeScreen() {
+export default function SignInScreen() {
   const [token, setLocalToken] = useState<string | null>(null);
   const { setToken, setSpotifyUserId } = useAuth();
+  const router = useRouter();
+  const { setMusicService } = useMusicService();
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -35,13 +41,14 @@ export default function HomeScreen() {
   );
 
   useEffect(() => {
-    if (response?.type === 'success') {
+    if (response?.type === 'success' && response?.params?.code) {
       exchangeCodeForToken(response.params.code);
     }
   }, [response]);
 
   // Exchange code for token and store user data in Firebase
   const exchangeCodeForToken = async (code: string) => {
+    console.log("Entering exchangeCodeForToken with code:", code);
     try {
       if (!request?.codeVerifier) {
         console.error("Missing code verifier!");
@@ -90,7 +97,10 @@ export default function HomeScreen() {
 
       const spotifyUserId = userProfile.id;
       setSpotifyUserId(spotifyUserId);
+      
 
+      setMusicService('Spotify');
+ 
       // Authenticate user with Firebase (anonymous sign-in)
       let firebaseUser = auth.currentUser;
       if (!firebaseUser) {
@@ -99,10 +109,8 @@ export default function HomeScreen() {
           console.log("Signed in Firebase user:", firebaseUser.uid);
       }
 
-      
-
       // Save token and user profile in Firebase Realtime Database
-      const userRef = ref(database, `users/${spotifyUserId}`);
+      const userRef = ref(database, `users/${firebaseUser.uid}/Spotify`);
       await set(userRef, {
         firebaseUID: firebaseUser.uid, // Store Firebase user ID
         spotifyAccessToken: accessToken,
@@ -115,7 +123,6 @@ export default function HomeScreen() {
       console.error("Token exchange error:", error);
     }
   };
-
 
   const fetchUserProfile = async () => {
     try {
@@ -142,7 +149,8 @@ export default function HomeScreen() {
     } catch (error) {
         console.error("User profile fetch error:", error);
     }
-};
+  };
+
 
   return (
     <ThemedView style={styles.overall}>
@@ -162,7 +170,8 @@ export default function HomeScreen() {
         icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>} 
         style={styles.appleButton} 
         mode="elevated"
-        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:17, }}>
+        labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:17, }}
+        onPress={handleAppleMusicLogin}>
           LOG IN WITH APPLE MUSIC
       </Button>
     </ThemedView>
@@ -175,10 +184,15 @@ const styles = StyleSheet.create({
     flex:1,
     justifyContent: 'center',
   },
+  buttonsContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    flex: 1,
+    justifyContent: 'space-evenly', // Evenly distribute buttons
+  },
   reactLogo: {
     height: '50%',
     width: '100%',
-    // resizeMode: 'contain'
   },
   spotifyButton: {
     backgroundColor: '#1BB954',
