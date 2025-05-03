@@ -352,6 +352,10 @@ async function addHarmonizer(id: string, playlist: string): Promise<boolean> {
       name: name.val(),
     };
     await set(harmonizerRef, harmonizer)
+
+    const harmonizerPlaylistRef = ref(database, `users/${id}/userPlaylists/${playlist}`);
+    await set(harmonizerPlaylistRef, true);
+
     return true;
   } catch (error) {
     console.error("Error adding harmonizer:", error);
