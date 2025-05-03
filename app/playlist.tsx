@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { database } from './config/firebase';
 import { ref, onValue, set, get, update } from 'firebase/database';
 import { Playlist, Song, UserRef } from '@/types';
+import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 
 // Local type for Spotify track search results
 type SpotifyTrack = {
@@ -870,7 +871,7 @@ export default function PlaylistScreen() {
       onDismiss={() => setExportVisible(false)}>
       <View style={styles.exportWrap}>
        <View style={styles.exportContent}>
-         <Pressable>
+         <Pressable onPress={() => exportToSpotify(playlist.id, token || "")}>
            <Text style={styles.exportText}>
              Export to Spotify
            </Text>
