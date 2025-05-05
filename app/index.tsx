@@ -192,20 +192,28 @@ export default function Authentication() {
 }
 
 const styles = StyleSheet.create({
+  wrapper: { 
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    // justifyContent: 'center',
+  },
+  reactLogo: {
+    height: '37%',
+    width: '100%',
   },
   title: {
     fontSize: 35,
-    marginBottom: 40,
+    marginBottom: 5,
     textAlign: 'center',
     color: 'grey',
     fontWeight: 'bold',
   },
   input: {
-    marginBottom: 12,
+    marginBottom: 7,
     elevation: 5,
     borderRadius: 20,
     shadowColor: 'black',
@@ -230,14 +238,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
-  reactLogo: {
-    height: '50%',
-    width: '100%',
-    // marginVertical: 5,
-  },
   splash: {
-    ...StyleSheet.absoluteFillObject,    // top:0,left:0,right:0,bottom:0
-    backgroundColor: '#fff',              // or your brand color
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -245,5 +248,4 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  wrapper: { flex: 1 },
 });

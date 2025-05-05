@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly', // Evenly distribute buttons
   },
   reactLogo: {
-    height: '50%',
+    height: '30%',
     width: '100%',
   },
   spotifyButton: {
