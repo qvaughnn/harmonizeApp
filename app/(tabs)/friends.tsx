@@ -396,8 +396,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   friendList: {
-    top: 80,
-    right: 90
+    top: 540,
+    left: 30,
+    position: 'absolute'
   },
   friendCard: {
     backgroundColor: 'purple',
@@ -459,11 +460,11 @@ const styles = StyleSheet.create({
   addButton: {
     width: 100,
     height: 45,
-    top: 70,
-    left: 130,
+    top: 480,
+    left: 270,
     backgroundColor: '#C39BD3',
     justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute'
   },
   addButtonText: {
     color: 'white',
@@ -471,8 +472,10 @@ const styles = StyleSheet.create({
     fontSize: 20
   },
   modalView: {
-    right: '35%',
-    bottom: 100
+    left: 50,
+    position: 'absolute',
+    top: 400,
+
   },
   modalContainer: {
     backgroundColor: 'white',
