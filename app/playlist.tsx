@@ -744,10 +744,6 @@ export default function PlaylistScreen() {
   }
 }
 
-
-
-
-
   // Load Playlist from Firebase
   useEffect(() => { 
     if (!playlistId) return;
@@ -1152,42 +1148,41 @@ export default function PlaylistScreen() {
       onDismiss={() => setExportVisible(false)}>
       <View style={styles.exportWrap}>
        <View style={styles.exportContent}>
-         <Pressable onPress={() => exportToSpotify(playlist.id, token || "")}>
-           <Text style={styles.exportText}>
-             Export to Spotify
-           </Text>
-         </Pressable>
-         <Pressable
+        <Button 
+          icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>} 
+          style={styles.spotifyExport} 
+          mode="elevated"
+          labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}
+          onPress={() => {exportToSpotify(playlist.id, token || ""); setExportVisible(false)}}>
+            Export to Spotify
+        </Button>
+        <Button
           onPress={() => {
             if (playlist && currentUser?.uToken) {
               exportToAppleMusic(playlist, currentUser.uToken);
+              setExportVisible(false);
             } else {
               console.warn('Playlist or user token missing');
             }
-           }}
-           >
-           <Text style={styles.exportText}>
-             Export to Apple Music
-           </Text>
-         </Pressable>
+            }}
+          icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>} 
+          mode="elevated"
+          labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:18, }}
+          style={styles.appleExport} 
+          >
+          Export to Apple Music
+        </Button>
         <View style={ {marginTop: 10, alignItems: 'center'} }>
-         <Pressable onPress={() => setExportVisible(false)}>
-           <Text style={styles.exportClose}>
-             Cancel
-           </Text>
-         </Pressable>
+        <Button 
+         style={styles.exportClose}
+         onPress={() => setExportVisible(false)}
+         labelStyle={{ color: 'white', fontSize:15, }}> 
+          Cancel
+        </Button>
         </View>
        </View>
       </View>
      </Modal>
-      {/*Potential Edit Playlist Button (Options to remove song etc))}
-      {/* <IconButton
-        icon="pencil-circle"
-        size={40}
-        onPress={showPopup}
-        style={styles.editIcon}
-        iconColor="black"
-      /> */}
       {/* Add Song Button that is only visible when edit button is not active*/}
       {!editMode && (<IconButton
         icon="plus-circle-outline"
@@ -1324,9 +1319,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
   },
-  backButton: {
-    // marginLeft: 10,
-  },
+
   playlistTitle: {
     fontWeight: 'bold',
     color: 'white',
@@ -1471,7 +1464,6 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 16,
   },
-
   cancelButtonText: {
     color: 'black',
     fontSize: 16,
@@ -1491,7 +1483,7 @@ const styles = StyleSheet.create({
   },
   exportWrap: {
     position: 'absolute',
-    top: 400, // or wherever you want it to appear
+    top: 400, 
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -1502,19 +1494,54 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     width: '80%',
-    elevation: 5, // for shadow on Android
-    shadowColor: '#000', // for shadow on iOS
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  exportText: {
-    fontSize: 20,
-    marginBottom: 20
+  spotifyExport: {
+    backgroundColor: '#1BB954',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 30, 
+    elevation: 5, 
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  spotifyLogo: {
+    height:40,
+    width:40
+  },
+  appleExport: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 30,
+    elevation: 5, 
+    shadowColor: 'black', 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    marginVertical: 20,
+  },
+  appleLogo: {
+    height:30,
+    width:30,
+    resizeMode: 'contain'
   },
   exportClose: {
-    fontSize: 15,
+    // fontSize: 15,
+    backgroundColor: 'grey',
     marginBottom: 20,
+    borderRadius: 30,
+    elevation: 5, 
+    shadowColor: 'black', 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   modalBoxSuccess: {
     backgroundColor: 'white',
