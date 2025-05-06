@@ -475,7 +475,6 @@ const styles = StyleSheet.create({
     left: 50,
     position: 'absolute',
     top: 400,
-
   },
   modalContainer: {
     backgroundColor: 'white',
