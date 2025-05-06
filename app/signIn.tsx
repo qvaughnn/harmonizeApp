@@ -36,6 +36,7 @@ export default function SignInScreen() {
       redirectUri: REDIRECT_URI,
       responseType: AuthSession.ResponseType.Code,
       usePKCE: true,
+      prompt: 'consent',
     },
     discovery
   );
@@ -69,6 +70,9 @@ export default function SignInScreen() {
         body: params.toString(),
       });
 
+      const rawText = await tokenResponse.text();
+      console.log("Raw token response:", rawText);
+
       const tokenData = await tokenResponse.json();
       if (tokenData.error) {
         console.error("Spotify Token Error:", tokenData);
@@ -77,6 +81,11 @@ export default function SignInScreen() {
       console.log("Spotify Token:", tokenData);
       const accessToken = tokenData.access_token;
       const refreshToken = tokenData.refresh_token;
+
+
+      if (!refreshToken) {
+        console.warn("No refresh token returned. This will break future sessions.");
+      }
 
       setLocalToken(accessToken); // local state if needed
       setToken(accessToken); // update global context
@@ -97,6 +106,7 @@ export default function SignInScreen() {
 
       const spotifyUserId = userProfile.id;
       setSpotifyUserId(spotifyUserId);
+      setToken(accessToken);
       
 
       setMusicService('Spotify');

@@ -32,7 +32,7 @@ const Profile = () => {
           "Content-Type": "application/json",
         },
       });
-
+      console.log("This is a RESPONSE: ", response);
       const data = await response.json();
 
       if (response.ok) {

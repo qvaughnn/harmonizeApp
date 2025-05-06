@@ -14,6 +14,7 @@ import * as Linking from 'expo-linking';
 import { decode as atob } from 'base-64';
 import { getFirestore } from "firebase/firestore";
 import { collection, getDocs } from "firebase/firestore";
+import { refreshSpotifyToken } from './services/spotifyAuth';
 
 
 
@@ -57,6 +58,7 @@ export default function ConnectScreen() {
       redirectUri: REDIRECT_URI,
       responseType: AuthSession.ResponseType.Code,
       usePKCE: true,
+      prompt: 'consent',
     },
     discovery
   );
@@ -150,16 +152,33 @@ export default function ConnectScreen() {
         body: params.toString(),
       });
 
-      const tokenData = await tokenResponse.json();
-      if (tokenData.error) {
-        console.error("Spotify Token Error:", tokenData);
+
+      const rawText = await tokenResponse.text();
+      console.log("Raw tokn response:", rawText);
+
+      let tokenData;
+      try {
+        tokenData = JSON.parse(rawText);
+      } catch (err) {
+        console.error("Failed to parse token response JSON:", err);
         return;
       }
+
+
+//     const tokenData = await tokenResponse.json();
+//      if (tokenData.error) {
+//        console.error("Spotify Token Error:", tokenData);
+//        return;
+//      }
       console.log("Spotify Token:", tokenData);
       const accessToken = tokenData.access_token;
       const refreshToken = tokenData.refresh_token;
 
       setToken(accessToken); // update global context
+      console.log("This isan ACCESS TOKEN: ", accessToken);
+      console.log("This is a REFRESH TOKEN: ", refreshToken);
+
+      let accessTokenToUse = accessToken;
 
       // Fetch the Spotify user profile to get the Spotify User ID
       const userProfileResponse = await fetch("https://api.spotify.com/v1/me", {
@@ -169,15 +188,45 @@ export default function ConnectScreen() {
           "Content-Type": "application/json",
         },
       });
+      console.log("User profile response: ", userProfileResponse);
+
+      if (userProfileResponse.status === 403) {
+        console.warn("Access token might be expired, attempting refresh...");
+        accessTokenToUse = await refreshSpotifyToken(firebaseUser.uid, refreshToken);
+
+  // Retry the request with new access token
+        const retryResponse = await fetch("https://api.spotify.com/v1/me", {
+           method: "GET",
+           headers: {
+            Authorization: `Bearer ${accessTokenToUse}`,
+            "Content-Type": "application/json",
+            "Accept-Encoding": "identity",
+          },
+        });
+
+        if (!retryResponse.ok) {
+          const text = await retryResponse.text();
+          console.error("Retry also failed:", retryResponse.status, text);
+          return;
+        }
+
+        const userProfile = await retryResponse.json();
+      }
+
       const userProfile = await userProfileResponse.json();
       if (!userProfile.id) {
         console.error("Error fetching user profile:", userProfile);
         return;
       }
 
+      setToken(accessTokenToUse);
+      console.log("User profile test: ", userProfile);
+
       const spotifyUserId = userProfile.id;
       setSpotifyUserId(spotifyUserId);
       setMusicService('Spotify');
+
+      console.log("Spotify ID test: ", spotifyUserId);
 
       // Authenticate user with Firebase 
       const firebaseUser = getAuth().currentUser;

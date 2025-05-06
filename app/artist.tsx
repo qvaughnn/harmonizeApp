@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { ref, onValue, set, push, get } from 'firebase/database';
-import { database } from './config/firebase';
+import { database, fireDB } from './config/firebase';
 import { Playlist, PlaylistPreview, Song, UserRef } from '@/types';
+import { useMusicService } from '../contexts/MusicServiceContext';
+import { collection, getDocs } from "firebase/firestore";
 
 type Album = {
     id: string;
@@ -30,7 +32,7 @@ type SpotifyTrack = {
 
 export default function Artist() {
     const { id } = useLocalSearchParams();
-    const { token } = useAuth();
+    const { token, currentUser } = useAuth();
     const [artist, setArtist] = useState<any>(null);
     const [albums, setAlbums] = useState<Album[]>([]);
     const [loading, setLoading] = useState(true);
@@ -38,11 +40,28 @@ export default function Artist() {
     const [topTracks, setTopTracks] = useState<any>(null);
     const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
     const [playlistModal, setPlaylistModal] = useState(false);
+    const { musicService } = useMusicService();
+
+
+    const getFirestore = async () => {
+    const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+    for (const doc of querySnapshot.docs) {
+        const data = doc.data();
+        if (data.devToken) {
+            return data.devToken;
+        }
+    }
+    return null;
+    };
+
+
 
     useEffect(() => {
         const fetchArtist = async () => {
-            if (!id || !token) return;
+            if (!id || (!token && !currentUser.uToken)) return;
             try {
+                console.log("UseEffect activated");
+                if(musicService === 'Spotify'){
                 const artistRes = await fetch(`https://api.spotify.com/v1/artists/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -61,6 +80,37 @@ export default function Artist() {
                 });
                 const topTracksData = await topTracksRes.json();
                 setTopTracks(topTracksData.tracks);
+                } else { //Apple logic
+                const devToken = await getFirestore();
+                const userToken = currentUser?.uToken;
+
+                const artistRes = await fetch(`https://api.music.apple.com/v1/catalog/us/artists/${id}`, {
+                    headers: {
+                        Authorization: `Bearer ${devToken}`,
+                        'Music-User-Token': userToken,
+                    },
+                });
+                const artistData = await artistRes.json();
+                setArtist(artistData.data[0]);
+
+                const topTracksRes = await fetch(`https://api.music.apple.com/v1/catalog/us/artists/${id}/view/top-songs`, {
+                    headers: {
+                        Authorization: `Bearer ${devToken}`,
+                        'Music-User-Token': userToken,
+                    },
+                });
+                const topTracksData = await topTracksRes.json();
+                setTopTracks(topTracksData.data || []);
+
+                const albumsRes = await fetch(`https://api.music.apple.com/v1/catalog/us/artists/${id}/albums`, {
+                    headers: {
+                        Authorization: `Bearer ${devToken}`,
+                        'Music-User-Token': userToken,
+                    },
+                });
+                const albumsData = await albumsRes.json();
+                setAlbums(albumsData.data || []);
+            }
 
             } catch (error) {
                 console.error('Error fetching artist data:', error);
@@ -68,13 +118,24 @@ export default function Artist() {
                 setLoading(false);
             }
         }; fetchArtist();
-    }, [id, token]);
+    }, [id, token, musicService, currentUser]);
 
     const openPicker = (item: SpotifyTrack) => {
         setSelectedTrack(item);
         setPlaylistModal(true);
       };
       
+
+
+    if (loading) {
+    return (
+        <ThemedView style={styles.loadingContainer}>
+            <ActivityIndicator size="large" />
+        </ThemedView>
+    );
+}
+
+
 
     return(
         <ThemedView style={styles.overall}>
@@ -88,62 +149,93 @@ export default function Artist() {
                                 size={30}
                                 onPress={() => router.back()}
                             />
-                            <Text style = {styles.artistName}> {artist.name}</Text>
+                            <Text style = {styles.artistName}>
+                               {artist.attributes?.name ?? artist.name}
+                            </Text>
                         </View>
-                        {artist.images && artist.images[0] && (
-                            <Image source={{ uri: artist.images[0].url }} style={styles.artistImage} />
-                        )}
-                    </View>
+                          {artist.attributes?.artwork?.url ? (
+                             // Apple Music
+                             <Image
+                              source={{ uri: artist.attributes.artwork.url.replace('{w}x{h}', '400x400') }}
+                              style={styles.artistImage}
+                            />
+                          ) : artist.images?.[0]?.url ? (
+                             // Spotify
+                             <Image
+                              source={{ uri: artist.images[0].url }}
+                              style={styles.artistImage}
+                            />
+                          ) : null}
+                        </View>
                 )}
                 {/* displays the artists top tracks */}
                 <Text style = {styles.albumContainer}>Popular Songs</Text>
                 {topTracks?.slice(0, 3).map((track: any) => (
-                    <List.Item
+                   <List.Item
                         key={track.id}
-                        title={track.name}
-                        titleStyle={{color: 'white'}}
+                        title={track.attributes?.name ?? track.name}
+                        titleStyle={{ color: 'white' }}
                         right={props => (
-                            <IconButton
-                                {...props}
-                                icon="plus-circle-outline"
-                                size={24}
-                                style={styles.addIcon}
-                                iconColor="white"
-                                onPress={() => {
-                                // Handle add song to playlist
-                                console.log(`Adding track: ${track.name}`); 
-                                openPicker(track)
-                                }}
-                        
-                            />
+                             <IconButton
+                                  {...props}
+                                  icon="plus-circle-outline"
+                                  size={24}
+                                  style={styles.addIcon}
+                                  iconColor="white"
+                                  onPress={() => {
+                                    console.log(`Adding track: ${track.attributes?.name ?? track.name}`);
+                                    openPicker(track);
+                                  }}
+                              />
                         )}
-                        left={() => (
-                        <Image
-                            source={{ uri: track.album.images[0].url }}
-                            style={styles.albumImage}
-                        />
-                        )}
-                    />
-                    ))}
-
-                {/* displays all of the artists albums */}
-                <Text style = {styles.albumContainer}>Albums</Text>
-                {albums.map((album) => (
-                    <List.Item
-                        key={album.id}
-                        title={album.name}
-                        titleStyle={styles.albumTitle}
-                        description={album.release_date.slice(0, 4)}
-                        descriptionStyle={{ color: 'white' }}
-                        left={() => (
-                            <Image
-                                source={{ uri: album.images?.[0]?.url }}
-                                style={styles.albumImage}
-                            />
-                        )}
-                        onPress={() => router.push({ pathname: '/album', params: { id: album.id } })} 
-                    />
+                        left={() =>
+                             track.attributes?.artwork?.url || track.album?.images?.[0]?.url ? (
+                                 <Image
+                                   source={{
+                                     uri: track.attributes?.artwork?.url
+                                        ? track.attributes.artwork.url.replace('{w}x{h}', '100x100')
+                                        : track.album.images[0].url,
+                                    }}
+                                 style={styles.albumImage}
+                                 />
+                             ) : null
+                         }
+                   />
                 ))}
+ 
+                {/* displays all of the artists albums */}
+                <Text style={styles.albumContainer}>Albums</Text>
+                {albums.map((album) => {
+                   const isAppleMusic = musicService === 'AppleMusic';
+                   const albumName = isAppleMusic ? album.attributes?.name : album.name;
+                   const albumImage = isAppleMusic
+                      ? album.attributes?.artwork?.url?.replace('{w}x{h}', '100x100')
+                      : album.images?.[0]?.url;
+                   const releaseYear = isAppleMusic
+                      ? album.attributes?.releaseDate?.slice(0, 4)
+                      : album.release_date?.slice(0, 4);
+                   const albumId = album.id;
+
+                   return (
+                      <List.Item
+                         key={albumId}
+                         title={albumName}
+                         titleStyle={styles.albumTitle}
+                         description={releaseYear}
+                         descriptionStyle={{ color: 'white' }}
+                         left={() =>
+                           albumImage ? (
+                             <Image
+                                source={{ uri: albumImage }}
+                                style={styles.albumImage}
+                             />
+                           ) : null
+                         }
+                         onPress={() => router.push({ pathname: '/album', params: { id: albumId } })}
+                     />
+                   );
+                })}
+
             </ScrollView>
         </ThemedView>
     )

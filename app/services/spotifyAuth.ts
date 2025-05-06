@@ -1,11 +1,14 @@
 // src/services/spotifyAuth.ts
 import { app, database } from "../config/firebase";
 import { ref, set, update } from "firebase/database";
+import { useAuth } from "../../contexts/AuthContext";
 
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
 
 export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: string) => {
   try {
+    const { setToken } = useAuth();
+
     console.log("Starting token refresh process");
     const url = "https://accounts.spotify.com/api/token";
     const params = new URLSearchParams({
@@ -43,6 +46,8 @@ export const refreshSpotifyToken = async (firebaseUid: string, refreshToken: str
       expiresAt: Date.now() + tokenData.expires_in * 1000,
     });
 
+
+    setToken(tokenData.access_token);
     return tokenData.access_token;
   } catch (error) {
     console.error("Token refresh error:", error);

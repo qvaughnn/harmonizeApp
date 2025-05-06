@@ -121,10 +121,17 @@ export default function SearchScreen() {
             return;
           }
           
+
+          console.log("This is a TOKEN: ", token);
+
+ 
           const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,album,artist&limit=10`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           
+          console.log("This is a search RESPONSE: ", res);
+
+
           const data = await res.json();
           
           if (res.ok) {

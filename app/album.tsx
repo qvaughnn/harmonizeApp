@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { ref, onValue, set, push, get } from 'firebase/database';
-import { database } from './config/firebase';
+import { database, fireDB } from './config/firebase';
 import { Playlist, PlaylistPreview, Song, UserRef } from '@/types';
+import { useMusicService } from '../contexts/MusicServiceContext';
+import { collection, getDocs } from "firebase/firestore";
 
 type SpotifyTrack = {
     id: string;
@@ -23,6 +25,7 @@ type SpotifyTrack = {
 export default function Album() {
     const { id } = useLocalSearchParams();
     const { token, currentUser } = useAuth();
+    const { musicService } = useMusicService();
     const [loading, setLoading] = useState(true);
     const [album, setAlbum] = useState<any>(null);
     const [tracks, setTracks] = useState<SpotifyTrack[]>([]);
@@ -34,6 +37,19 @@ export default function Album() {
     const [newName, setNewName] = useState('');
     const placeholderCover = require('../assets/images/coverSample.png');
     const router = useRouter();
+
+
+
+    const getFirestore = async () => {
+    const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+    for (const doc of querySnapshot.docs) {
+    const data = doc.data();
+    if (data.devToken) return data.devToken;
+    }
+    return null;
+    };
+
+
 // Load user playlists
 useEffect(() => {
   if (!currentUser?.id) return;
@@ -68,14 +84,30 @@ useEffect(() => {
 
     useEffect(() => {
         const fetchAlbum = async () => {
-            if (!id) return;
+            if (!id || (!token && !currentUser?.uToken)) return;
             try{
+            if( musicService === 'Spotify'){
         const res = await fetch(`https://api.spotify.com/v1/albums/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         setAlbum(data);
         setTracks(data.tracks.items);
+        } else {
+          const devToken = await getFirestore();
+          const userToken = currentUser?.uToken;
+
+          const albumRes = await fetch(`https://api.music.apple.com/v1/catalog/us/albums/${id}`, {
+            headers: {
+              Authorization: `Bearer ${devToken}`,
+              'Music-User-Token': userToken,
+            },
+          });
+          const albumData = await albumRes.json();
+          setAlbum(albumData.data[0]);
+          setTracks(albumData.data[0]?.relationships?.tracks?.data || []);
+        }
+        
         } catch (error) {
             console.error('Error fetching album:', error);
         } finally {
@@ -95,13 +127,14 @@ useEffect(() => {
           return;
         }
         const newSong: Song = {  
-          spotify_id: selectedTrack.id,
+          spotify_id: musicService === 'Spotify' ? selectedTrack.id : '',
+          apple_music_id: musicService === 'AppleMusic' ? selectedTrack.id : '',
           name: selectedTrack.name,
           artist: selectedTrack.artists?.map(a => a.name).join(', ') || '',
           spotify_uri: selectedTrack.uri || '',
           duration_ms: selectedTrack.duration_ms || 0,
           cover_art: album?.images?.[0]?.url || 'placeholderCover',
-          album: album?.name || '',
+          album: selectedTrack.album?.name ?? selectedTrack.attributes?.albumName ?? '',
         };
         const updated = [...(plSnap.songs || []), newSong];
         await set(ref(database, `playlists/${plId}/songs`), updated);
@@ -138,6 +171,9 @@ useEffect(() => {
       };
 
     
+    const albumTitle = album?.name ?? album?.attributes?.name;
+    const albumArt = album?.images?.[0]?.url ?? album?.attributes?.artwork?.url?.replace('{w}x{h}', '400x400');
+    const artistName = album?.artists?.map((a: any) => a.name).join(', ') ?? album?.attributes?.artistName;
 
 
     return (
@@ -153,10 +189,10 @@ useEffect(() => {
                             iconColor="grey"
                             onPress={() => router.back()}
                         />
-                      <Text style={styles.albumTitle}>{album.name}</Text>
-                    </View>
-                    <Image source={{ uri: album.images[0]?.url }} style={styles.cover} />
-                    <Text style={styles.artist}>{album.artists.map((a: any) => a.name).join(', ')}</Text>
+                        <Text style={styles.albumTitle}>{albumTitle}</Text>
+                     </View>
+                      {albumArt && <Image source={{ uri: albumArt }} style={styles.cover} />}
+                      <Text style={styles.artist}>{artistName}</Text>                     
                   </View>
                 )}
 
@@ -164,8 +200,8 @@ useEffect(() => {
                     {tracks.map((track) => (
                     <List.Item
                         key={track.id}
-                        title={track.name}
-                        description={track.artists.map(a => a.name).join(', ')}
+                        title={track?.name ?? track.attributes?.name ?? 'Unknown Track'}
+                        description={track.artists?.map(a => a.name).join(', ') ?? track.attributes?.artistName ?? 'Unknown Artist'}
                         titleStyle={styles.trackTitle}
                         descriptionStyle={styles.trackDesc}
                         right={props => (

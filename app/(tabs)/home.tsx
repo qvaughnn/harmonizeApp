@@ -15,7 +15,7 @@ const { width } = Dimensions.get('window');
 const Home = () => {
   const { currentUser } = useAuth();
   const router = useRouter();
-  const { token } = useAuth();
+  const { setToken, token } = useAuth();
   const [results, setResults] = useState<PlaylistPreview[]>([]);
   const { setMusicService, musicService } = useMusicService();
 
@@ -34,7 +34,17 @@ const Home = () => {
     const userSpotRef = ref(database, `users/${currentUser.id}/Spotify`);
     console.log("MusicService1: ", musicService);
     get(userSpotRef).then((snapshot) => {
-      if (!snapshot.exists()) {
+      if (snapshot.exists()) {
+        console.log("Snapshot exists");
+        const spotifyData = snapshot.val();
+        if (spotifyData?.accessToken) {
+          console.log("Setting token from Firebase:", spotifyData?.accessToken);
+          setToken(spotifyData.accessToken);
+          setMusicService('Spotify');
+        } else {
+          console.warn("Spotify data exists but no access token found.");
+        }
+      } else {
         setMusicService('AppleMusic');
       }
     });

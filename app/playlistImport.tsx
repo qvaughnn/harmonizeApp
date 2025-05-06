@@ -152,6 +152,8 @@ const AllPlaylists = () => {
       console.log("Fetch response: ", response);
 
       const data = await response.json();
+
+      console.log("Data test: ", data);
   
       if (response.ok) {
         const playlistsData = data.items || [];
@@ -164,7 +166,9 @@ const AllPlaylists = () => {
               playlist.images?.[0]?.url ?? require('../assets/images/coverSample.png'),
           };
         });
-  
+
+        console.log("Fetched playlists: ", fetchedPlaylists);
+ 
         setResults(fetchedPlaylists);
         setFilteredResults(fetchedPlaylists);
       } else {
