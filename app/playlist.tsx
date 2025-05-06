@@ -1634,7 +1634,7 @@ const styles = StyleSheet.create({
     position: 'fixed'
   },
   closeinbar: {
-    top: -50,
+    top: -30,
     left: 235
   },
   cardRow: {
