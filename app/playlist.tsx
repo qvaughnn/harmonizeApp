@@ -1069,8 +1069,8 @@ export default function PlaylistScreen() {
               )}
               <View>
                 <Text style={styles.owner}>
-                  Owner: {(playlist.owner as UserRef).name}
-                  {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
+                  Harmonizers: {(playlist.owner as UserRef).name}
+                  {/* Harmonizers: {[playlist.owner, ...playlist.collaborators].map(user => user.name).join(', ')} */}
                 </Text>
                 {playlist.description ? (
                   <Text style={styles.description}>{playlist.description}</Text>
@@ -1202,7 +1202,6 @@ export default function PlaylistScreen() {
         iconColor='white'
       />)
       }
-
 
       {/* Search & Add Modal */}
       <Modal visible={modalVisible} transparent onDismiss={() => setModalVisible(false)}>
