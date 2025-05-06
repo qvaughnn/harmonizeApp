@@ -291,14 +291,12 @@ const Friends = () => {
       </Text>
       <ScrollView style={styles.receivedList}>
         {received.map((friend, index) => (
-          <Card key={index} style={styles.receivedCard}>
-            <Card.Content style={styles.friendInfo}>
-            <Text style={styles.friendName}>{friend.code}</Text>
-            </Card.Content>
-            <Card.Actions style={styles.buttonPlacement}>
-              <Button onPress={() => handleAccept(friend.id)}>Accept</Button>
-              <Button onPress={() => handleDecline(friend.id)}>Decline</Button>
-            </Card.Actions>
+          <Card key={friend.id} style={styles.friendCard}>
+            <View style={styles.cardRow}>
+              <Text style={styles.friendName}>{friend.code}</Text>
+              <Button style={styles.friendCardButton} onPress={() => handleAccept(friend.id)}>Accept</Button>
+              <Button style={styles.friendCardButton} onPress={() => handleDecline(friend.id)}>Decline</Button>
+            </View>
           </Card>
         ))}
       </ScrollView>
@@ -340,15 +338,13 @@ const Friends = () => {
           </Button>
         </Modal>
       </View>
-      <ScrollView style={styles.friendList}>
-        {friends.map((friend) => (
+        <ScrollView style={styles.friendList}>
+        {friends.map((friend, index) => (
           <Card key={friend.id} style={styles.friendCard}>
-            <Card.Content style={styles.friendInfo}>
+            <View style={styles.cardRow}>
               <Text style={styles.friendName}>{friend.code}</Text>
-            </Card.Content>
-            <Card.Actions style={styles.buttonPlacement}>
-              <Button onPress={() => handleRemove(friend.id)}>Remove</Button>
-            </Card.Actions>
+              <Button style={styles.friendCardButton} onPress={() => handleRemove(friend.id)}>Remove</Button>
+            </View>
           </Card>
         ))}
       </ScrollView>
@@ -381,18 +377,16 @@ const styles = StyleSheet.create({
   },
   receivedList: {
     top: 140,
-    right: 40
+    left: 10
   },
   receivedCard: {
     backgroundColor: 'purple',
     borderWidth: 1,
     borderColor: 'white',
     marginBottom: 15,
-    paddingLeft: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   friendList: {
@@ -501,10 +495,19 @@ const styles = StyleSheet.create({
   confirmButton: {
     borderRadius: 6,
   },
-  buttonPlacement: {
+  cardRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    // marginTop: 8,
-    // justifyContent: 'flex-end', 
-  }
+  },
+  friendCardButton: {
+    backgroundColor: 'white',
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    elevation: 5, 
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    margin: 8
+  },
 });

@@ -1278,27 +1278,24 @@ export default function PlaylistScreen() {
       <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
         <View style={styles.modalContent}>
           <Text variant="displaySmall" style={styles.addFreindsTitle}>
-
-          Add Friends to Playlist</Text>
+            Add Friends to Playlist
+          </Text>
           <IconButton
             icon="close"
             size={30}
             onPress={() => setAddCollab(false)}
             style={styles.closeinbar}
           />
-          <ScrollView style={styles.friendList}>
-                  {friends.map((friend) => (
-                    <Card key={friend.id} style={styles.friendCard}>
-                      <Card.Content style={styles.friendInfo}>
-                        <Text style={styles.friendName}>{friend.code}</Text>
-                      </Card.Content>
-                      <Card.Actions>
-                        <Button onPress={() => handleAdd(friend.id, playlistIdCorrect)}>Add</Button>
-                      </Card.Actions>
-                    </Card>
-                  ))}
-            </ScrollView>
-
+          <ScrollView style={styles.friendsAddScroll}>
+            {friends.map((friend) => (
+              <Card key={friend.id} style={styles.friendCard}>
+                <View style={styles.cardRow}>
+                  <Text style={styles.friendName}>{friend.code}</Text>
+                  <Button style={styles.friendCardButton} onPress={() => handleAdd(friend.id, playlistIdCorrect)}>Add</Button>
+                </View>
+              </Card>
+            ))}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -1319,7 +1316,6 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
   },
-
   playlistTitle: {
     fontWeight: 'bold',
     color: 'white',
@@ -1400,21 +1396,9 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 40
   },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 30,
-    margin: 20,
-    borderRadius: 8,
-    height: '80%',
-    top: 70
-  },
   searchbar: {
     marginBottom: -40,
     width: '90%'
-  },
-  closeinbar: {
-    top: -15,
-    left: 285
   },
   thumbnail: {
     width: 40,
@@ -1533,7 +1517,6 @@ const styles = StyleSheet.create({
     resizeMode: 'contain'
   },
   exportClose: {
-    // fontSize: 15,
     backgroundColor: 'grey',
     marginBottom: 20,
     borderRadius: 30,
@@ -1590,22 +1573,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(150, 144, 144, 0.8)', // semi-transparent black
   },
-  friendList: {
-    top: 80,
-    right: 20
-  },
   friendCard: {
     backgroundColor: 'purple',
     borderWidth: 1,
     borderColor: 'white',
     marginBottom: 15,
     paddingLeft: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    // width: 250
   },
   friendInfo: {
     flex: 1,
@@ -1617,6 +1591,39 @@ const styles = StyleSheet.create({
   },
   addFreindsTitle:{
     fontWeight: 'bold',
-    color: 'white'
+    color: 'black',
+    fontSize: 22
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    width: 300,
+    padding: 10,
+    margin: 20,
+    borderRadius: 8,
+    top: 300,
+    left: 30,
+    position: 'fixed'
+  },
+  closeinbar: {
+    top: -50,
+    left: 235
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  friendCardButton: {
+    backgroundColor: 'white',
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    elevation: 5, 
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    margin: 10
+  },
+  friendsAddScroll: {
+    top: -30
   }
 });

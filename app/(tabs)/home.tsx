@@ -185,9 +185,6 @@ const Home = () => {
             <Card.Content style={styles.friendInfo}>
               <Text style={styles.friendName}>{friend.code}</Text>
             </Card.Content>
-            {/* <Card.Actions>
-              <Button onPress={() => handleAdd(friend.id, playlistIdCorrect)}>Add</Button>
-            </Card.Actions> */}
           </Card>
         ))}
       </ScrollView>
@@ -335,7 +332,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    // width: 250
   },
   friendInfo: {
     flex: 1,
