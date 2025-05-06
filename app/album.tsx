@@ -258,7 +258,7 @@ useEffect(() => {
                 width: '80%'
               },
               artist: {
-                color: 'grey',
+                color: '#DADADA',
                 marginTop: 4,
                 textAlign: 'center',
               },
@@ -266,7 +266,7 @@ useEffect(() => {
                 color: 'white',
               },
               trackDesc: {
-                color: 'grey',
+                color: '#DADADA',
               },
               addIcon: {
                 marginRight: 2,

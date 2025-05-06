@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   description: {
-    color: 'grey',
+    color: '#DADADA',
   },
   addIcon: {
     marginRight: 2,
