@@ -19,7 +19,7 @@ import { refreshSpotifyToken } from './services/spotifyAuth';
 
 
 const CLIENT_ID = '9c9e9ac635c74d33b4cec9c1e6878ede';
-const REDIRECT_URI = 'exp://10.141.174.39:8081';
+const REDIRECT_URI = 'exp://10.139.94.38:8081';
 const SCOPES = ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public'];
 
 const discovery = {

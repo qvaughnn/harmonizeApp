@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, Image, FlatList, Pressable, Modal, Animated } from 'react-native';
-import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon } from 'react-native-paper';
+import { StyleSheet, View, Image, FlatList, Pressable, Modal, Animated, ScrollView } from 'react-native';
+import { Text, ActivityIndicator, IconButton, Searchbar, List, Icon, Card, Button} from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedView } from '@/components/ThemedView';
 import { useMusicService } from '../contexts/MusicServiceContext';
 import { database, fireDB } from './config/firebase';
-import { ref, onValue, set, push, get, update } from 'firebase/database';
 import { Playlist, Song, UserRef } from '@/types';
-//import { encode as btoa } from 'base-64';
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove, update } from "firebase/database";
+import { encode as btoa } from 'base-64';
 import { collection, getDocs } from "firebase/firestore"; 
 
+import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 
 // Local type for Spotify track search results
 type SpotifyTrack = {
@@ -30,6 +31,40 @@ type User = {
   id: string;
   picture: string;
 }
+
+/*
+const getFirestore = (): Promise<string | undefined> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+      for (const doc of querySnapshot.docs) {
+        const data = doc.data();
+        if (data.devToken) {
+          return resolve(data.devToken);
+        }
+      }
+      resolve(undefined); // if no devToken found
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+useEffect(() => {
+  const fetchFirestoreData = () => {
+    (async () => {
+      try {
+        await getFirestore();
+      } catch (error) {
+        console.error('Error fetching data from Firestore:', error);
+      }
+    })();
+  };
+
+  fetchFirestoreData();
+}, []);
+
+*/
 
 // Export given playlist to Apple Music
 async function exportToAppleMusic(playlistId: string, developerToken: string, musicUserToken: string): Promise<string[]> {
@@ -109,6 +144,8 @@ async function exportToAppleMusic(playlistId: string, developerToken: string, mu
 }
 
 async function createAppleMusicPlaylist(developerToken: string, musicUserToken: string, name: string, description: string = ''): Promise<string> {
+  try{
+
   const url = `https://api.music.apple.com/v1/me/library/playlists`;
 
   const body = {
@@ -135,9 +172,14 @@ async function createAppleMusicPlaylist(developerToken: string, musicUserToken: 
 
   const data = await response.json();
   return data.data[0].id;
+  } catch (error) {
+    console.log("Error exporting to Apple: ", error);
+  }
+
 }
 
 async function addTracksToAppleMusicPlaylist(developerToken: string, musicUserToken: string, playlistId: string, trackIds: string[]): Promise<void> {
+  try{
   const url = `https://api.music.apple.com/v1/me/library/playlists/${playlistId}/tracks`;
 
   const body = {
@@ -161,6 +203,10 @@ async function addTracksToAppleMusicPlaylist(developerToken: string, musicUserTo
     const errorData = await response.json();
     throw new Error(`Failed to add tracks to Apple Music playlist: ${errorData.error?.message || errorData}`);
   }
+  } catch (error) {
+    console.log("Error exporting to Apple Music: ", error);
+  }
+    
 }
 
 // Export given playlist to Spotify and returns missing songs as an array of strings
@@ -327,6 +373,42 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
+
+export async function getFriends(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await get(ref(database, `friends/${userId}`));
+    if (snapshot.exists()) {
+      return Object.keys(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting friends:", error);
+    return [];
+  }
+}
+
+async function addHarmonizer(id: string, playlist: string): Promise<boolean> {
+  try {
+    const userRef = ref(database, `users/${id}/profile/displayName`);
+    const name = await get(userRef);
+    const playlistRef = ref(database, `playlists/${playlist}/harmonizers`);
+    const harmonizerRef = push(playlistRef);
+    const harmonizer = {
+      id: id,
+      name: name.val(),
+    };
+    await set(harmonizerRef, harmonizer)
+
+    const harmonizerPlaylistRef = ref(database, `users/${id}/userPlaylists/${playlist}`);
+    await set(harmonizerPlaylistRef, true);
+
+    return true;
+  } catch (error) {
+    console.error("Error adding harmonizer:", error);
+    return false;
+  }
+}
+
 // used as input to converter functions
 type SongMatchInput = {
   name: string;
@@ -345,7 +427,6 @@ export async function getBestAppleMusicMatch({
   const storefront = "us";
   const searchTerm = encodeURIComponent(`${name} ${artists.join(" ")}`);
   const url = `https://api.music.apple.com/v1/catalog/${storefront}/search?term=${searchTerm}&types=songs&limit=10`;
-
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -521,7 +602,9 @@ export async function getBestSpotifyMatch(
 export default function PlaylistScreen() {
   const router = useRouter();
   const { currentUser, token } = useAuth();
+  const id = currentUser!.id;
   const { id: playlistId } = useLocalSearchParams();
+  const playlistIdCorrect = Array.isArray(playlistId) ? playlistId.join(", ") : playlistId;
 
   const { musicService } = useMusicService();
 
@@ -552,6 +635,34 @@ export default function PlaylistScreen() {
   const [addCollab, setAddCollab] = useState(false);
   const [friendsResults, setFriendsResults] = useState<User[]>([]);
 
+
+  const [friends, setFriends] = useState<{ id: string; code: string }[]>([]);
+
+  const [appleDevToken, setAppleDevToken] = useState<string | null>(null);
+
+
+   useEffect(() => {
+      const friendsRef = ref(database, `friends/${id}`);
+  
+      const unsubFriends = onValue(friendsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const friendIds = Object.keys(snapshot.val());
+          const friendCodePromises = friendIds.map(async (friendId) => {
+            const codeSnap = await get(ref(database, `users/${friendId}/profile/displayName`));
+            return {
+              id: friendId,
+              code: codeSnap.exists() ? String(codeSnap.val()) : "Unknown"
+            };
+          });
+  
+          Promise.all(friendCodePromises).then(setFriends);
+        } else {
+          setFriends([]);
+        }
+      });
+    }, [id]);
+
+
   // Pin playlist name when scrolling
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -574,6 +685,31 @@ export default function PlaylistScreen() {
   });
 
 
+
+const fetchFirestoreToken = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(fireDB, "privKey"));
+    for (const doc of querySnapshot.docs) {
+      const data = doc.data();
+      if (data.devToken) {
+        setAppleDevToken(data.devToken);
+        return; // exit once found
+      }
+    }
+    console.warn("No devToken found in Firestore");
+  } catch (error) {
+    console.error("Error fetching devToken from Firestore:", error);
+  }
+};
+
+useEffect(() => {
+  fetchFirestoreToken();
+}, []);
+
+
+
+
+/*
   const getFirestore = async () => {
   const querySnapshot = await getDocs(collection(fireDB, "privKey"));
   for (const doc of querySnapshot.docs) {
@@ -595,7 +731,9 @@ export default function PlaylistScreen() {
   };
  fetchFirestoreData();
  }, []);
+*/
 
+/*
   async function exportToAppleMusic(playlist: Playlist, userToken: string) {
   const appleDev = await getFirestore(); 
   const headers = {
@@ -683,9 +821,7 @@ export default function PlaylistScreen() {
   }
 }
 
-
-
-
+*/
 
   // Load Playlist from Firebase
   useEffect(() => { 
@@ -854,6 +990,20 @@ export default function PlaylistScreen() {
     }
   };
 
+  const exportToSpotifyPressable = async () => {
+    if (!playlistId || !token) {
+      console.error("Playlist ID or Spotify Token null");
+    }
+
+    try {
+      const idStr = Array.isArray(playlistId) ? playlistId.join(", ") : playlistId;
+      const result = await exportToSpotify(idStr, token || '');
+    } catch (error) {
+      console.error("Spotify export failed:", error)
+    }
+  }
+
+
   // Add selected track to playlist
   const selectTrack = async (track: SpotifyTrack) => {
     if (!playlistId || !currentUser || !playlist) return;
@@ -876,7 +1026,8 @@ export default function PlaylistScreen() {
      cover_art: track.album.images[0]?.url ?? '',
      spotify_id: track.id,
      spotify_uri: track.uri ?? '',
-     apple_uri: track.url ?? '',
+     apple_music_id: '',
+     apple_uri: '',
     };
     }
     else{
@@ -886,8 +1037,9 @@ export default function PlaylistScreen() {
       album: typeof track.album === 'string' ? track.album : track.album?.name ?? '',
       duration_ms: track.duration_ms,
       cover_art: track.image ?? '', 
-      spotify_id: track.id, // Used for both Apple and Spotify
-      spotify_uri: track.uri ?? '',
+      spotify_id: '',
+      spotify_uri:  '',
+      apple_music_id: track.id ?? '',
       apple_uri: track.uri ?? '',
     };
     }
@@ -906,6 +1058,13 @@ export default function PlaylistScreen() {
     const updatedSongs = playlist.songs?.filter((s: Song) => s.spotify_id !== songToRemove.spotify_id);
     await set(ref(database, `playlists/${playlistId}/songs`), updatedSongs);
     setConfirmRemoveVisible(false);
+  }
+
+  const handleAdd = (friendId: string, playlistId:string) => {
+    console.log("hi");
+    addHarmonizer(friendId, playlistId);
+    console.log('friend added to playlist:', friendId);
+    setAddCollab(false);
   }
 
   // Successful Add Timed Popup
@@ -934,26 +1093,27 @@ export default function PlaylistScreen() {
   }
 
   return (
+    
     <ThemedView style={styles.overall}>
 
-    <Animated.View
-      style={[
-        styles.floatingTitleContainer,
-        {
-          transform: [{ translateY: titleTopOffset }],
-        },
-      ]}
-    >
       <Animated.View
         style={[
-          styles.floatingTitleBackground,
-          { opacity: headerBackgroundOpacity },
+          styles.floatingTitleContainer,
+          {
+            transform: [{ translateY: titleTopOffset }],
+          },
         ]}
-      />
-      <Animated.Text style={[styles.floatingTitleText, { fontSize: titleFontSize }]}>
-        {playlist.name}
-      </Animated.Text>
-    </Animated.View>
+      >
+        <Animated.View
+          style={[
+            styles.floatingTitleBackground,
+            { opacity: headerBackgroundOpacity },
+          ]}
+        />
+        <Animated.Text style={[styles.floatingTitleText, { fontSize: titleFontSize }]}>
+          {playlist.name}
+        </Animated.Text>
+      </Animated.View>
 
       <Animated.FlatList
         data={playlist.songs}
@@ -966,78 +1126,78 @@ export default function PlaylistScreen() {
         )}
         scrollEventThrottle={16}
         ListHeaderComponent={(
-        <View>
-          
-          <View style={styles.headerContainer}>
-            <IconButton
-              icon="arrow-left"
-              size={30}
-              onPress={() => router.back()}
-              style={styles.backButton}
-              iconColor="grey"
-            />
-          </View>
+          <View>
 
-          <View style={styles.coverContainer}>
-            {playlist.cover_art && (
-              <Image
-                source={
-                  typeof playlist.cover_art === 'string'
-                    ? { uri: playlist.cover_art }
-                    : playlist.cover_art
-                }
-                style={styles.coverImage}
-              />
-            )}
-            <View>
-              <Text style={styles.owner}>
-                Owner: { (playlist.owner as UserRef).name }
-                {/* Harmonizers: {playlist.owner?.display_name || 'Unknown'} */}
-              </Text>
-              {playlist.description ? (
-                <Text style={styles.description}>{playlist.description}</Text>
-              ) : null} 
-
-          <View style={styles.exportEditContainer}>
-            {/* <Pressable onPress={() => router.push('/friends')}> */}
-              {/* <Text style={styles.export}>Export</Text> */}
+            <View style={styles.headerContainer}>
               <IconButton
-                icon="export-variant"
-                size={28}
-                onPress={()=>setExportVisible(true)}
-                iconColor="white"
+                icon="arrow-left"
+                size={30}
+                onPress={() => router.back()}
+                style={styles.backButton}
+                iconColor="grey"
               />
-            {/* </Pressable> */}
+            </View>
 
-            {/* Add Collaborator Button */}
-            <IconButton
-            icon="account-multiple-plus"
-            size={28}
-            onPress={() => {
-              // Open add collaborator modal or screen
-              console.log('Add collaborator pressed')
-              setAddCollab(true)
-            }}
-            iconColor="white"
-          />
+            <View style={styles.coverContainer}>
+              {playlist.cover_art && (
+                <Image
+                  source={
+                    typeof playlist.cover_art === 'string'
+                      ? { uri: playlist.cover_art }
+                      : playlist.cover_art
+                  }
+                  style={styles.coverImage}
+                />
+              )}
+              <View>
+                <Text style={styles.owner}>
+                  Harmonizers: {(playlist.owner as UserRef).name}
+                  {/* Harmonizers: {[playlist.owner, ...playlist.collaborators].map(user => user.name).join(', ')} */}
+                </Text>
+                {playlist.description ? (
+                  <Text style={styles.description}>{playlist.description}</Text>
+                ) : null}
 
-            {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
-              {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
-              <IconButton
-                icon ="pencil"
-                onPress = { () => {
-                  setEditMode(prev => !prev);
-                  
-                } }
-                size={28}
-                iconColor="white"
-              />
-            {/* </Pressable> */}
+                <View style={styles.exportEditContainer}>
+                  {/* <Pressable onPress={() => router.push('/friends')}> */}
+                  {/* <Text style={styles.export}>Export</Text> */}
+                  <IconButton
+                    icon="export-variant"
+                    size={28}
+                    onPress={() => setExportVisible(true)}
+                    iconColor="white"
+                  />
+                  {/* </Pressable> */}
+
+                  {/* Add Collaborator Button */}
+                  <IconButton
+                    icon="account-multiple-plus"
+                    size={28}
+                    onPress={() => {
+                      // Open add collaborator modal or screen
+                      console.log('Add collaborator pressed')
+                      setAddCollab(true)
+                    }}
+                    iconColor="white"
+                  />
+
+                  {/* <Pressable onPress={() => setEditMode(prev => !prev)}> */}
+                  {/* <Text style={styles.edit}>{editMode ? 'Done' : 'Edit'}</Text> */}
+                  <IconButton
+                    icon="pencil"
+                    onPress={() => {
+                      setEditMode(prev => !prev);
+
+                    }}
+                    size={28}
+                    iconColor="white"
+                  />
+                  {/* </Pressable> */}
+                </View>
+              </View>
             </View>
           </View>
-          </View>
-        </View>
-          
+
         )}
             renderItem={({ item }) => (
               <View style={styles.trackItem}>
@@ -1070,42 +1230,41 @@ export default function PlaylistScreen() {
       onDismiss={() => setExportVisible(false)}>
       <View style={styles.exportWrap}>
        <View style={styles.exportContent}>
-         <Pressable>
-           <Text style={styles.exportText}>
-             Export to Spotify
-           </Text>
-         </Pressable>
-         <Pressable
+        <Button 
+          icon={() => <Image style={styles.spotifyLogo} source={require('@/assets/images/spotifyLogo.png')}></Image>} 
+          style={styles.spotifyExport} 
+          mode="elevated"
+          labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}
+          onPress={() => {exportToSpotify(playlist.id, token || ""); setExportVisible(false)}}>
+            Export to Spotify
+        </Button>
+        <Button
           onPress={() => {
             if (playlist && currentUser?.uToken) {
-              exportToAppleMusic(playlist, currentUser.uToken);
+              exportToAppleMusic(playlist.id, appleDevToken, currentUser.uToken);
+              setExportVisible(false);
             } else {
               console.warn('Playlist or user token missing');
             }
-           }}
-           >
-           <Text style={styles.exportText}>
-             Export to Apple Music
-           </Text>
-         </Pressable>
+            }}
+          icon={() => <Image style={styles.appleLogo} source={require('@/assets/images/appleLogo.png')}></Image>} 
+          mode="elevated"
+          labelStyle={{ color: 'black', fontWeight: 'bold', fontSize:18, }}
+          style={styles.appleExport} 
+          >
+          Export to Apple Music
+        </Button>
         <View style={ {marginTop: 10, alignItems: 'center'} }>
-         <Pressable onPress={() => setExportVisible(false)}>
-           <Text style={styles.exportClose}>
-             Cancel
-           </Text>
-         </Pressable>
+        <Button 
+         style={styles.exportClose}
+         onPress={() => setExportVisible(false)}
+         labelStyle={{ color: 'white', fontSize:15, }}> 
+          Cancel
+        </Button>
         </View>
        </View>
       </View>
      </Modal>
-      {/*Potential Edit Playlist Button (Options to remove song etc))}
-      {/* <IconButton
-        icon="pencil-circle"
-        size={40}
-        onPress={showPopup}
-        style={styles.editIcon}
-        iconColor="black"
-      /> */}
       {/* Add Song Button that is only visible when edit button is not active*/}
       {!editMode && (<IconButton
         icon="plus-circle-outline"
@@ -1125,7 +1284,6 @@ export default function PlaylistScreen() {
         iconColor='white'
       />)
       }
-
 
       {/* Search & Add Modal */}
       <Modal visible={modalVisible} transparent onDismiss={() => setModalVisible(false)}>
@@ -1161,7 +1319,7 @@ export default function PlaylistScreen() {
               )}
             />
           )}
-          
+
         </View>
       </Modal>
 
@@ -1170,14 +1328,14 @@ export default function PlaylistScreen() {
         <ThemedView style={styles.confirmModal}>
           <Text style={styles.confirmText}>
             Are you sure you want to remove{' '}
-            <Text style={{ fontWeight: 'bold', color:'white'}}>{selectedSongToRemove?.name}</Text>?
+            <Text style={{ fontWeight: 'bold', color: 'white' }}>{selectedSongToRemove?.name}</Text>?
           </Text>
           <View style={styles.buttonContainer}>
             <Pressable style={styles.confirmButton} onPress={() => selectedSongToRemove && removeSong(selectedSongToRemove)}>
-               <Text style={styles.confirmButtonText}>Yes</Text> 
+              <Text style={styles.confirmButtonText}>Yes</Text>
             </Pressable>
             <Pressable style={styles.cancelButton} onPress={() => setConfirmRemoveVisible(false)}>
-               <Text style={styles.cancelButtonText}>Cancel</Text> 
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
           </View>
         </ThemedView>
@@ -1185,17 +1343,42 @@ export default function PlaylistScreen() {
 
       {/* Successful adding */}
       <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
-      <View style={styles.modalWrap}>
-        <View style={styles.modalBoxSuccess}>
-          <IconButton
-            icon='check'
-            size={60}
-            iconColor='black'
-          />
-          <Text variant="titleLarge">Successfully Added!</Text>
+        <View style={styles.modalWrap}>
+          <View style={styles.modalBoxSuccess}>
+            <IconButton
+              icon='check'
+              size={60}
+              iconColor='black'
+            />
+            <Text variant="titleLarge">Successfully Added!</Text>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Search and Add for friends Modal */}
+      <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
+        <View style={styles.modalContent}>
+          <Text variant="displaySmall" style={styles.addFreindsTitle}>
+            Add Friends to Playlist
+          </Text>
+          <IconButton
+            icon="close"
+            size={30}
+            onPress={() => setAddCollab(false)}
+            style={styles.closeinbar}
+          />
+          <ScrollView style={styles.friendsAddScroll}>
+            {friends.map((friend) => (
+              <Card key={friend.id} style={styles.friendCard}>
+                <View style={styles.cardRow}>
+                  <Text style={styles.friendName}>{friend.code}</Text>
+                  <Button style={styles.friendCardButton} onPress={() => handleAdd(friend.id, playlistIdCorrect)}>Add</Button>
+                </View>
+              </Card>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
 
     {/* Search and Add for friends Modal */}
     <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
@@ -1250,9 +1433,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: 'row',
-  },
-  backButton: {
-    // marginLeft: 10,
   },
   playlistTitle: {
     fontWeight: 'bold',
@@ -1320,7 +1500,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   trackArtist: {
-    color: 'grey',
+    color: '#DADADA',
     fontSize: 14,
   },
   editIcon: {
@@ -1329,20 +1509,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'flex-start',
   },
-   addIcon: { 
-    position: 'absolute', 
-    right: 20, 
+  addIcon: {
+    position: 'absolute',
+    right: 20,
     bottom: 40
   },
-   modalContent: { 
-    backgroundColor: 'white', 
-    padding: 30,
-    margin: 20, 
-    borderRadius: 8,
-    height: '80%',
-    top: 70
-  },
-   searchbar: { 
+  searchbar: {
     marginBottom: -40,
     width: '90%'
   },
@@ -1370,7 +1542,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: 'white',
   },
-  buttonContainer:{
+  buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     width: '100%',
@@ -1398,7 +1570,6 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 16,
   },
-  
   cancelButtonText: {
     color: 'black',
     fontSize: 16,
@@ -1418,7 +1589,7 @@ const styles = StyleSheet.create({
   },
   exportWrap: {
     position: 'absolute',
-    top: 400, // or wherever you want it to appear
+    top: 400, 
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -1429,20 +1600,54 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     width: '80%',
-    elevation: 5, // for shadow on Android
-    shadowColor: '#000', // for shadow on iOS
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  exportText: {
-    fontSize: 20,
-    marginBottom: 20
+  spotifyExport: {
+    backgroundColor: '#1BB954',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 30, 
+    elevation: 5, 
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  spotifyLogo: {
+    height:40,
+    width:40
+  },
+  appleExport: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 30,
+    elevation: 5, 
+    shadowColor: 'black', 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    marginVertical: 20,
+  },
+  appleLogo: {
+    height:30,
+    width:30,
+    resizeMode: 'contain'
   },
   exportClose: {
-    fontSize: 15,
+    backgroundColor: 'grey',
     marginBottom: 20,
-  }, 
+    borderRadius: 30,
+    elevation: 5, 
+    shadowColor: 'black', 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
   modalBoxSuccess: {
     backgroundColor: 'white',
     opacity: 0.7,
@@ -1490,4 +1695,57 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(150, 144, 144, 0.8)', // semi-transparent black
   },
+  friendCard: {
+    backgroundColor: 'purple',
+    borderWidth: 1,
+    borderColor: 'white',
+    marginBottom: 15,
+    paddingLeft: 10,
+    paddingHorizontal: 12,
+  },
+  friendInfo: {
+    flex: 1,
+  },
+  friendName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white'
+  },
+  addFreindsTitle:{
+    fontWeight: 'bold',
+    color: 'black',
+    fontSize: 22
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    width: 300,
+    padding: 10,
+    margin: 20,
+    borderRadius: 8,
+    top: 300,
+    left: 30,
+    position: 'fixed'
+  },
+  closeinbar: {
+    top: -50,
+    left: 235
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  friendCardButton: {
+    backgroundColor: 'white',
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    elevation: 5, 
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    margin: 10
+  },
+  friendsAddScroll: {
+    top: -30
+  }
 });

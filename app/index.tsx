@@ -15,7 +15,7 @@ export default function Authentication() {
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const router = useRouter();
-  const { setToken, setCurrentUser } = useAuth();
+  const { token, setToken, setCurrentUser } = useAuth();
   const auth = getAuth();
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const [showSplash, setShowSplash] = useState(true);
@@ -27,7 +27,7 @@ export default function Authentication() {
       
       if (isLogin) {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log("Logged in" + userCredential.user + userCredential.user.uid)
+        console.log("Logged in" + userCredential.user.uid)
 
         // Check if user has linked music services
         const userRef = ref(database, `users/${userCredential.user.uid}/profile`);
@@ -49,7 +49,6 @@ export default function Authentication() {
           const userSpotifyRef = ref(database, `users/${userCredential.user.uid}/Spotify`);
           const spotifySnapshot = await get(userSpotifyRef);
           const spotifyData = spotifySnapshot?.val();
-
           // If Spotify token exists, check if it needs refresh
           if (spotifyData && spotifyData.accessToken) {
             console.log("Found Spotify data:", spotifyData)
@@ -59,23 +58,25 @@ export default function Authentication() {
               // Token is expired, refresh it
               try {
                 // router.replace('/connect');
+                console.log("Expired Token: ", spotifyData.accessToken);
                 setToken(await refreshSpotifyToken(userCredential.user.uid, spotifyData.refreshToken));
-                console.log("Spotify token refresh completed");
+                console.log("Token Refreshed: ", token);
               } catch (error) {
                 console.error("Error refreshing token:", error);
+                return;
               }
+            } else {
               setToken(spotifyData.accessToken);
-              console.log("Token SET: ", spotifyData.accessToken);
             }
-            console.log("Now going to home")
-            // Navigate to home page
-            router.replace('/(tabs)/home');
-     //     } else if (appleSnap.exists()){
-     //       console.log("GOING HOME");
-     //       router.replace('/(tabs)/home');
+            if (token != null) {
+              setToken(spotifyData.accessToken);
+              console.log("Now going to home");
+              // Navigate to home page
+              router.replace('/(tabs)/home');
+            }
           } else {
             // No music service connected yet
-            console.log("No music service connected yet")
+            console.log("No music service connected yet");
             router.replace('/connect');
           }
         } else {
@@ -97,12 +98,12 @@ export default function Authentication() {
       } else {
         // New user registration
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log("Signed up" + userCredential.user + userCredential.user.uid)
+        console.log("Signed up" + userCredential.user.uid)
         //Not sure about this yet
 //      const friendCode = await generateUniqueFriendCode();          // new util (see §4)
 //      await set(userRef, { email, displayName: email, friendCode });
         // New users always go to index to connect music service
-        router.replace('/connect');
+        router.replace('./connect');
       }
     } catch (err: any) {
       setError(err.message);
@@ -191,20 +192,28 @@ export default function Authentication() {
 }
 
 const styles = StyleSheet.create({
+  wrapper: { 
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    // justifyContent: 'center',
+  },
+  reactLogo: {
+    height: '37%',
+    width: '100%',
   },
   title: {
     fontSize: 35,
-    marginBottom: 40,
+    marginBottom: 5,
     textAlign: 'center',
     color: 'grey',
     fontWeight: 'bold',
   },
   input: {
-    marginBottom: 12,
+    marginBottom: 7,
     elevation: 5,
     borderRadius: 20,
     shadowColor: 'black',
@@ -229,14 +238,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
-  reactLogo: {
-    height: '50%',
-    width: '100%',
-    // marginVertical: 5,
-  },
   splash: {
-    ...StyleSheet.absoluteFillObject,    // top:0,left:0,right:0,bottom:0
-    backgroundColor: '#fff',              // or your brand color
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -244,5 +248,4 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  wrapper: { flex: 1 },
 });

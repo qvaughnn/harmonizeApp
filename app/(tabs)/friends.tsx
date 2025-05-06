@@ -1,17 +1,55 @@
-import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, ScrollView} from 'react-native';
+import { Image, StyleSheet, Platform, View, ImageBackground, Pressable, ScrollView } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { Text, TextInput, Button, Searchbar, Avatar, Card } from 'react-native-paper';
+import { Text, TextInput, Button, Searchbar, Avatar, Card, IconButton, Portal, Modal } from 'react-native-paper';
 import React, { useEffect, useState } from 'react';
 import { app, database } from "../config/firebase";
 import { useAuth } from '../../contexts/AuthContext';
-import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
+// import {User} from '@/types';
+// import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
 import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove } from "firebase/database";
+
+async function getUserIdByFriendCode(friendCode: string): Promise<string | null> {
+  try {
+    console.log("Getting user:", friendCode);
+    const usersRef = ref(database, "users");
+
+    const q = query(usersRef, orderByChild("profile/friendCode"), equalTo(friendCode));
+    const snapshot = await get(q);
+    console.log("Snapshot obtained:", snapshot);
+
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      const userId = Object.keys(data)[0];
+      console.log("ID", userId);
+      return userId;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error getting user ID:", error);
+    return null;
+  }
+}
 
 // returns true if successful and false if not
 export async function addFriend(currentUser: string, targetUser: string): Promise<boolean> {
   try {
-    const sentRef = ref(database, `friend_requests/${currentUser}/sent/${targetUser}`);
-    const receivedRef = ref(database, `friend_requests/${targetUser}/received/${currentUser}`);
+    targetUser = targetUser.toUpperCase();
+    if (targetUser.length != 6 || !(/^[A-Z]+$/.test(targetUser))) {
+      console.error("Friend codes must be 6 letters");
+      return false;
+    }
+    const friendCodeRef = ref(database, `friendCodes/${targetUser}`);
+    const friendCode = await get(friendCodeRef);
+    if (!friendCode.exists()) {
+      console.error("Friend code doesn't exist:", targetUser);
+      return false;
+    }
+
+    const userId = await getUserIdByFriendCode(targetUser);
+
+    const sentRef = ref(database, `friend_requests/${currentUser}/sent/${userId}`);
+    const receivedRef = ref(database, `friend_requests/${userId}/received/${currentUser}`);
 
     // Send request from currentUser to targetUser
     await Promise.all([
@@ -141,37 +179,75 @@ export async function getSentFriendRequests(userId: string): Promise<string[]> {
   }
 }
 
+async function getFriendCode(id: string): Promise<string> {
+  const friendCodeRef = ref(database, `users/${id}/profile/friendCode`);
+  const friendCode = await get(friendCodeRef);
+  return String(friendCode.val());
+}
+
 const Friends = () => {
+  const { currentUser } = useAuth();
+  const id = currentUser!.id;
 
-  const { currentUser } = useAuth(); 
-  const id = currentUser.id;
-  // console.log('🟢 current friends:', getFriends(id));
-  const [searchQuery, setSearchQuery] = React.useState('');
-  function handleSearchQueryChange(query: string): void {
-    setSearchQuery(query);
-  }
-
-  
-  const [friends, setFriends] = useState<string[]>([]);
-  const [received, setReceived] = React.useState<string[]>([]);
-  const [sent, setSent] = React.useState<string[]>([]);
-
+  const [friends, setFriends] = useState<{ id: string; code: string }[]>([]);
+  const [received, setReceived] = useState<{ id: string; code: string }[]>([]);
+  const [addVisible, setAddVisible] = useState(false);
+  const [newFriendId, setNewFriendId] = useState('');
+  const [title, setTitle] = useState<string>("Loading...");
   useEffect(() => {
-    setFriends(getFriends(id));
-  }, [currentUser]);
+    const friendsRef = ref(database, `friends/${id}`);
+    const receivedRef = ref(database, `friend_requests/${id}/received`);
+    const friendCodeRef = ref(database, `users/${id}/profile/friendCode`);
 
-  useEffect(() => {
-    console.log('friends updated:', friends);
-  }, [friends]);
+    const unsubFriends = onValue(friendsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const friendIds = Object.keys(snapshot.val());
+        const friendCodePromises = friendIds.map(async (friendId) => {
+          const codeSnap = await get(ref(database, `users/${friendId}/profile/displayName`));
+          return {
+            id: friendId,
+            code: codeSnap.exists() ? String(codeSnap.val()) : "Unknown"
+          };
+        });
 
-  useEffect(() => {
-    setReceived(getReceivedFriendRequests(id));
-  }, [currentUser]);
+        Promise.all(friendCodePromises).then(setFriends);
+      } else {
+        setFriends([]);
+      }
+    });
 
-  useEffect(() => {
-    console.log('recieved updated:', friends);
-  }, [received]);
+    const unsubReceived = onValue(receivedRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const receivedIds = Object.keys(snapshot.val());
 
+        const receivedCodePromises = receivedIds.map(async (id) => {
+          const codeSnap = await get(ref(database, `users/${id}/profile/displayName`));
+          return {
+            id,
+            code: codeSnap.exists() ? String(codeSnap.val()) : "Unknown"
+          };
+        });
+
+        Promise.all(receivedCodePromises).then(setReceived);
+      } else {
+        setReceived([]);
+      }
+    });
+
+    const unsubFriendCode = onValue(friendCodeRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setTitle(String(snapshot.val()));
+      } else {
+        setTitle("No code");
+      }
+    });
+
+    return () => {
+      unsubFriends();
+      unsubReceived();
+      unsubFriendCode();
+    };
+  }, [id]);
 
   const handleAccept = async (requester: string) => {
     await acceptFriendRequest(id, requester);
@@ -180,80 +256,98 @@ const Friends = () => {
   const handleDecline = async (requester: string) => {
     await declineFriendRequest(id, requester);
   };
-
+  const openAdd = () => setAddVisible(true);
+  const closeAdd = () => {
+    setNewFriendId('');
+    setAddVisible(false);
+  };
+  const handleAdd = () => {
+    addFriend(id, newFriendId);
+    console.log('friend added:', newFriendId);
+    closeAdd();
+  }
+  const handleRemove = async (friendId: string) => {
+    const success = await removeFriend(id, friendId);
+    if (success) {
+      console.log(`Removed friend: ${friendId}`);
+    } else {
+      console.error(`Failed to remove friend: ${friendId}`);
+    }
+  };
 
   return (
     <ThemedView style={styles.overall}>
       <Text variant="displayMedium" style={styles.title}>
         FRIENDS
       </Text>
-      <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder="Search Friends"
-          value={searchQuery}
-          onChangeText={handleSearchQueryChange}
-          style={styles.searchbar}
-        />
-      </View>
+      <Text style={styles.code}>
+        Share your unique code with others to collaborate:
+      </Text>
+      <Card style={styles.codeCard}>
+        <Text style={styles.codeCardText}> {title} </Text>
+      </Card>
       <Text variant="headlineMedium" style={styles.requests}>
-          Friend Requests
-        </Text>
-
-      <Text variant="headlineMedium" style={styles.yourFriends}>
-          Your Friends
-        </Text>
-
-      {/* <View style={styles.listContainer}>
-        {friends.map((friend, index) => (
-          <Card key={index} style={styles.friendCard}>
-            <View style={styles.friendInfo}>
-              <View style={styles.textContainer}>
-                <Text style={styles.friendName}> {friend.name}</Text>
-              </View>
+        Friend Requests
+      </Text>
+      <ScrollView style={styles.receivedList}>
+        {received.map((friend, index) => (
+          <Card key={friend.id} style={styles.friendCard}>
+            <View style={styles.cardRow}>
+              <Text style={styles.friendName}>{friend.code}</Text>
+              <Button style={styles.friendCardButton} onPress={() => handleAccept(friend.id)}>Accept</Button>
+              <Button style={styles.friendCardButton} onPress={() => handleDecline(friend.id)}>Decline</Button>
             </View>
           </Card>
         ))}
-      </View> */}
-      {/* <ScrollView contentContainerStyle={styles.listContainer}> */}
-        {/* {friends.map((friendId) => (
-          <Card key={friendId} style={styles.friendCard}>
-            <Card.Content style={styles.friendCard}>
-              <Avatar.Text size={40} label={friendId.charAt(0).toUpperCase()} />
-              <Text style={styles.friendName}>{friendId}</Text>
-            </Card.Content>
+      </ScrollView>
+      <Text variant="headlineMedium" style={styles.yourFriends}>
+        Your Friends
+      </Text>
+      <Button
+        mode="contained"
+        onPress={openAdd}
+        style={styles.addButton}
+        labelStyle={styles.addButtonText}>
+        Add
+      </Button>
+      <View style={styles.modalView}>
+        <Modal
+          visible={addVisible}
+          // onDismiss={closeAdd}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <IconButton
+            icon="close"
+            size={24}
+            onPress={closeAdd}
+            style={styles.closeIcon}
+          />
+          <Text style={styles.modalTitle}>Add a Friend</Text>
+          <TextInput
+            label="Friend's User ID"
+            value={newFriendId}
+            onChangeText={setNewFriendId}
+            style={styles.input}
+          />
+          <Button
+            mode="contained"
+            onPress={handleAdd}
+            style={styles.confirmButton}
+          >
+            Add
+          </Button>
+        </Modal>
+      </View>
+        <ScrollView style={styles.friendList}>
+        {friends.map((friend, index) => (
+          <Card key={friend.id} style={styles.friendCard}>
+            <View style={styles.cardRow}>
+              <Text style={styles.friendName}>{friend.code}</Text>
+              <Button style={styles.friendCardButton} onPress={() => handleRemove(friend.id)}>Remove</Button>
+            </View>
           </Card>
-        ))} */}
-        {/* <Text variant="headlineSmall" style={styles.subheader}>
-          Incoming Requests
-        </Text>
-        {received.map((req) => (
-          <Card key={req} style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <Avatar.Text size={40} label={req.charAt(0).toUpperCase()} />
-              <Text style={styles.cardText}>{req}</Text>
-            </Card.Content>
-            <Card.Actions>
-              <Button onPress={() => handleAccept(req)}>Accept</Button>
-              <Button onPress={() => handleDecline(req)}>Decline</Button>
-            </Card.Actions>
-          </Card>
-        ))} */}
-
-        {/* <Text variant="headlineSmall" style={styles.subheader}>
-          Sent Requests
-        </Text>
-        {sent.map((req) => (
-          <Card key={req} style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <Avatar.Text size={40} label={req.charAt(0).toUpperCase()} />
-              <Text style={styles.cardText}>{req}</Text>
-            </Card.Content>
-            <Card.Actions>
-              <Button onPress={() => handleCancel(req)}>Cancel</Button>
-            </Card.Actions>
-          </Card>
-        ))} */}
-      {/* </ScrollView> */}
+        ))}
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -275,47 +369,52 @@ const styles = StyleSheet.create({
     left: 25,
     justifyContent: 'flex-start',
   },
-  searchContainer: {
-    marginTop: 100,
-    width: '90%'
-  },
-  searchbar: {
-    width: '100%',
-    marginBottom: 30,
-  },
   listContainer: {
     width: '100%',
     alignItems: 'center',
     flexWrap: 'wrap',
     paddingHorizontal: 20,
   },
-  friendCard: {
-    width: '70%',
-    height: 50, //adjusts the friend tile height
-    // backgroundcolor: 'transparant',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderWidth: 1,
-    marginBottom: 15,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 10,
+  receivedList: {
+    top: 140,
+    left: 10
   },
-  friendInfo: {
+  receivedCard: {
+    backgroundColor: 'purple',
+    borderWidth: 1,
+    borderColor: 'white',
+    marginBottom: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
-  textContainer: {
-    marginLeft: 12,
+  friendList: {
+    top: 540,
+    left: 30,
+    position: 'absolute'
+  },
+  friendCard: {
+    backgroundColor: 'purple',
+    borderWidth: 1,
+    borderColor: 'white',
+    marginBottom: 15,
+    paddingLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    // width: 250
+  },
+  friendInfo: {
+    flex: 1,
   },
   friendName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: 'white'
   },
-  // playlistText: {
-  //   fontSize: 14,
-  //   color: 'white'
-  // },
   yourFriends: {
     fontWeight: 'bold',
     color: 'darkgrey',
@@ -331,5 +430,84 @@ const styles = StyleSheet.create({
     top: 230,
     left: 25,
     justifyContent: 'flex-start',
+  },
+  codeCard: {
+    width: 100,
+    height: 50,
+    top: 90,
+    backgroundColor: '#D2B4DE',
+    borderWidth: 1,
+    marginBottom: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  codeCardText: {
+    color: 'black',
+    fontWeight: 'bold',
+  },
+  code: {
+    top: 80,
+    color: 'white',
+    paddingLeft: 10,
+    paddingRight: 10,
+  },
+  addButton: {
+    width: 100,
+    height: 45,
+    top: 480,
+    left: 270,
+    backgroundColor: '#C39BD3',
+    justifyContent: 'center',
+    position: 'absolute'
+  },
+  addButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 20
+  },
+  modalView: {
+    left: 50,
+    position: 'absolute',
+    top: 400,
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 8,
+    padding: 20,
+    height: 250,
+    width: 250,
+  },
+  closeIcon: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  input: {
+    marginBottom: 16,
+  },
+  confirmButton: {
+    borderRadius: 6,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  friendCardButton: {
+    backgroundColor: 'white',
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    elevation: 5, 
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    margin: 8
   },
 });

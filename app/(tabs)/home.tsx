@@ -1,5 +1,5 @@
-import { Image, StyleSheet, Dimensions, Pressable, View, Modal, Button} from 'react-native';
-import { Text, Avatar, Card, IconButton } from 'react-native-paper';
+import { Image, StyleSheet, Dimensions, Pressable, View, Modal, ScrollView} from 'react-native';
+import { Text, Avatar, Card, IconButton, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-snap-carousel-v4';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,26 +7,65 @@ import { ThemedView } from '@/components/ThemedView';
 import React, { useEffect, useState } from 'react';
 import { database } from '../config/firebase';
 import { PlaylistPreview, Playlist, UserRef, Song } from '@/types';
-import { ref, set, get, onValue, push } from 'firebase/database';
+import { ref, set, onValue, get, child, push, DatabaseReference, query, orderByChild, equalTo, DataSnapshot, remove, update } from "firebase/database";
 import { useMusicService } from '../../contexts/MusicServiceContext';
+
 
 const { width } = Dimensions.get('window');
 
+export async function getFriends(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await get(ref(database, `friends/${userId}`));
+    if (snapshot.exists()) {
+      return Object.keys(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting friends:", error);
+    return [];
+  }
+}
+
 const Home = () => {
   const { currentUser } = useAuth();
+  const id = currentUser!.id;
   const router = useRouter();
   const { setToken, token } = useAuth();
   const [results, setResults] = useState<PlaylistPreview[]>([]);
   const { setMusicService, musicService } = useMusicService();
 
-  const friends = [
-    {name: 'Alice', playlists: 4, avatar:require('../../assets/images/avatar.png')},
-    {name: 'Charlie', playlists: 2, avatar:require('../../assets/images/avatar.png')},
-    {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')},
-  ];
+  // const friends = [
+  //   {name: 'Alice', playlists: 4, avatar:require('../../assets/images/avatar.png')},
+  //   {name: 'Charlie', playlists: 2, avatar:require('../../assets/images/avatar.png')},
+  //   {name: 'Lucy', playlists: 8, avatar:require('../../assets/images/avatar.png')},
+  // ];
+
+  const [friends, setFriends] = useState<{ id: string; code: string }[]>([]);
+  
+     useEffect(() => {
+        const friendsRef = ref(database, `friends/${id}`);
+    
+        const unsubFriends = onValue(friendsRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const friendIds = Object.keys(snapshot.val());
+            const friendCodePromises = friendIds.map(async (friendId) => {
+              const codeSnap = await get(ref(database, `users/${friendId}/profile/displayName`));
+              return {
+                id: friendId,
+                code: codeSnap.exists() ? String(codeSnap.val()) : "Unknown"
+              };
+            });
+    
+            Promise.all(friendCodePromises).then(setFriends);
+          } else {
+            setFriends([]);
+          }
+        });
+      }, [id]);
+  
 
 
-  console.log("Curr user: ", currentUser.id);
+  console.log("Curr user: ", id);
   // Fetch playlists the user has access to from Firebase
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -150,19 +189,15 @@ const Home = () => {
         <Text style={styles.view}>View all</Text>
       </Pressable>
 
-      <View style={styles.listContainer}>
-        {friends.map((friend,index) => (
-          <Card key={index} style={styles.friendCard}>
-            <View style={styles.friendInfo}>
-              <Avatar.Image size={40} source={friend.avatar}/>
-              <View style={styles.textContainer}>
-                <Text style={styles.friendName}>{friend.name}</Text>
-                <Text style={styles.playlistText}>{friend.playlists} playlists</Text>
-              </View>
-            </View>
+      <ScrollView style={styles.friendList}>
+        {friends.map((friend) => (
+          <Card key={friend.id} style={styles.friendCard}>
+            <Card.Content style={styles.friendInfo}>
+              <Text style={styles.friendName}>{friend.code}</Text>
+            </Card.Content>
           </Card>
         ))}
-      </View>
+      </ScrollView>
 
       <IconButton
         icon="information-outline"
@@ -254,27 +289,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 25
   },
-  friendCard: {
-    width: '70%',
-    height: 50,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderWidth: 1,
-    marginBottom: 15,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 10,
-  },
-  friendInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   textContainer: {
     marginLeft: 12,
-  },
-  friendName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white'
   },
   playlistText: {
     fontSize: 14,
@@ -309,5 +325,30 @@ const styles = StyleSheet.create({
     bottom: 100,
     position: 'absolute',
     justifyContent: 'flex-start',
+  },
+  friendList: {
+    top: 550,
+    left: 25,
+    position: 'absolute'
+  },
+  friendCard: {
+    backgroundColor: 'purple',
+    borderWidth: 1,
+    borderColor: 'white',
+    marginBottom: 15,
+    paddingLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  friendInfo: {
+    flex: 1,
+  },
+  friendName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white'
   },
 });
