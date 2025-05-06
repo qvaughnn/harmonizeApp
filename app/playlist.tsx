@@ -370,6 +370,7 @@ function normalizeTitle(title: string): string {
     .replace(/[^a-z0-9\s\-']/g, "")
     .replace(/\s*-\s*/g, "-")
     .replace(/\s+/g, " ")
+    .replace(/[\(\[\-\s]*radio edit[\)\]\-\s]*$|[\(\[\-\s]*radio edit[\)\]\-\s]*/gi, '')
     .trim();
 }
 
