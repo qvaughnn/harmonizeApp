@@ -469,6 +469,7 @@ const styles = StyleSheet.create({
     left: 50,
     position: 'absolute',
     top: 400,
+    zIndex: 9999,
   },
   modalContainer: {
     backgroundColor: 'white',

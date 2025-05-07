@@ -258,7 +258,6 @@ async function exportToSpotify(playlist: string, token: string): Promise<string[
           await update(newSongRef, {
             spotify_uri: bestMatch,
           }); // Update the song with the Spotify URI
-
         } else {
           missingSongs.push(`${(song as any).name} - ${(song as any).artist}`);
           console.log('No match found for song:', (song as any).name);
@@ -600,7 +599,7 @@ export async function getBestSpotifyMatch(
   }
 }
 
-export default function PlaylistScreen() {
+const PlaylistScreen= () => {
   const router = useRouter();
   const { currentUser, token } = useAuth();
   const id = currentUser!.id;
@@ -639,7 +638,12 @@ export default function PlaylistScreen() {
 
   const [friends, setFriends] = useState<{ id: string; code: string }[]>([]);
 
+
   const [appleDevToken, setAppleDevToken] = useState<string | null>(null);
+
+
+
+  const [successExportModal, setSuccessExportModal] = useState(false);
 
 
    useEffect(() => {
@@ -662,6 +666,7 @@ export default function PlaylistScreen() {
         }
       });
     }, [id]);
+
 
 
   // Pin playlist name when scrolling
@@ -939,6 +944,26 @@ useEffect(() => {
     return () => clearTimeout(timeout);
   }, [searchQuery, token]);
 
+  useEffect(() => {
+    if (successModal) {
+      const timer = setTimeout(() => {
+        setSuccessModal(false);
+      }, 1000); // show for 1 second
+  
+      return () => clearTimeout(timer);
+    }
+  }, [successModal]);
+
+  useEffect(() => {
+    if (successExportModal) {
+      const timer = setTimeout(() => {
+        setSuccessExportModal(false);
+      }, 1000); // show for 1 second
+  
+      return () => clearTimeout(timer);
+    }
+  }, [successExportModal]);
+
   const testMatch = async () => {
     try {
       const result = await getBestSpotifyMatch(
@@ -1093,6 +1118,8 @@ useEffect(() => {
     );
   }
 
+  const harmonizersAdded = Object.values(playlist.harmonizers || {}).map(h=> h.name).join(", ");
+
   return (
     
     <ThemedView style={styles.overall}>
@@ -1152,8 +1179,8 @@ useEffect(() => {
               )}
               <View>
                 <Text style={styles.owner}>
-                  Harmonizers: {(playlist.owner as UserRef).name}
-                  {/* Harmonizers: {[playlist.owner, ...playlist.collaborators].map(user => user.name).join(', ')} */}
+                  Harmonizers: {harmonizersAdded}
+
                 </Text>
                 {playlist.description ? (
                   <Text style={styles.description}>{playlist.description}</Text>
@@ -1236,7 +1263,7 @@ useEffect(() => {
           style={styles.spotifyExport} 
           mode="elevated"
           labelStyle={{ color: 'white', fontWeight: 'bold', fontSize:20, }}
-          onPress={() => {exportToSpotify(playlist.id, token || ""); setExportVisible(false)}}>
+          onPress={() => {exportToSpotify(playlist.id, token || ""); setExportVisible(false); setSuccessExportModal(true)}}>
             Export to Spotify
         </Button>
         <Button
@@ -1266,6 +1293,20 @@ useEffect(() => {
        </View>
       </View>
      </Modal>
+
+     <Modal visible={successExportModal} transparent animationType="fade">
+      <View style={styles.successModalWrap}>
+        <View style={styles.successModalBox}>
+          <IconButton
+            icon="check-circle"
+            iconColor="green"
+            size={80}
+          />
+          <Text style={styles.successText}>Export Successful!</Text>
+        </View>
+      </View>
+      </Modal>
+
       {/* Add Song Button that is only visible when edit button is not active*/}
       {!editMode && (<IconButton
         icon="plus-circle-outline"
@@ -1343,18 +1384,7 @@ useEffect(() => {
       </Modal>
 
       {/* Successful adding */}
-      <Modal visible={successModal} transparent onRequestClose={() => setSuccessModal(false)}>
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBoxSuccess}>
-            <IconButton
-              icon='check'
-              size={60}
-              iconColor='black'
-            />
-            <Text variant="titleLarge">Successfully Added!</Text>
-          </View>
-        </View>
-      </Modal>
+ 
 
       {/* Search and Add for friends Modal */}
       <Modal visible={addCollab} transparent onDismiss={() => setAddCollab(false)}>
@@ -1420,7 +1450,9 @@ useEffect(() => {
 
     </ThemedView>
   );
-}
+};
+
+export default PlaylistScreen;
 
 const styles = StyleSheet.create({
   loadingContainer: {
@@ -1728,7 +1760,7 @@ const styles = StyleSheet.create({
     position: 'fixed'
   },
   closeinbar: {
-    top: -50,
+    top: -30,
     left: 235
   },
   cardRow: {
@@ -1748,5 +1780,24 @@ const styles = StyleSheet.create({
   },
   friendsAddScroll: {
     top: -30
-  }
+  },
+  successModalWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  successModalBox: {
+    backgroundColor: 'white',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successText: {
+    marginTop: 15,
+    fontSize: 18,
+    color: 'green',
+    fontWeight: 'bold',
+  },
 });
