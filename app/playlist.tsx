@@ -150,7 +150,7 @@ async function createAppleMusicPlaylist(developerToken: string, musicUserToken: 
 
   const body = {
     attributes: {
-      name: name,
+      name: name + ' - Made with Harmonize',
       description: description,
     },
   };
@@ -302,7 +302,7 @@ async function createSpotifyPlaylist(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: playlistName,
+      name: playlistName + ' - Made with Harmonize',
       description: playlistDescription,
       public: isPublic,
     }),
